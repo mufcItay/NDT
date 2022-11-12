@@ -1,0 +1,183 @@
+library(weaknull)
+library(ggplot2)
+library(extraDistr)
+library(dplyr)
+library(tidyverse)
+library(gridExtra)
+library(gtable)
+library(grid)
+
+
+## from the weak null packages (not included)
+#' Create Sample Data
+#' @description The function generated mock data for tests and examples according to the arguments
+#' @param p_mean the effect's population mean
+#' @param p_sd the standard deviation of the population's effect
+#' @param seed - a seed to use when generating the resulting data frame
+#' @param N - the number of simulated participants
+#' @param trials_per_cnd - the number of simulated trials per condition
+#' @param wSEsd - the standard deviation of the dependent measure (within subject error term)
+#'
+#' @return a data frame with three columns: id (participant id), 'condition' (condition label), and 'var' (the dependent variable)
+create_sample_data <- function(p_mean, p_sd, seed = 1, N = 30, trials_per_cnd = 100, wSEsd = 2) {
+  set.seed(seed)
+  # 0 = faster/smaller condition (e.g., 'congruent'), 1 = slower/larger condition (e.g., 'incongruent'),
+  conditionLabels <- c(0,1)
+  # define the number of trials across all conditions
+  trialsN <- trials_per_cnd * length(conditionLabels)
+  
+  # define the baseline dependent measure statistical features
+  effect_baseline <- 0
+  within_subj_effect_sd <- wSEsd
+  
+  # define the effect statistical features
+  population_sd = p_sd
+  population_mean = p_mean
+  
+  # create an id column for the samples data
+  idv <- rep(1:N, each = trialsN)
+  # create a independent variable column
+  iv <- rep(rep(conditionLabels, each = trials_per_cnd), N)
+  
+  # sample effects for each subject
+  subj_true_effect <- stats::rnorm(N,population_mean,population_sd)
+  # sample effects for each subject and trial
+  subj_true_effect_per_trial <- rep(subj_true_effect, each = trialsN)
+  # set the dependent variable columns according to baseine, the true effect, and the indepdent variable
+  dv <- stats::rnorm(length(idv), effect_baseline, within_subj_effect_sd) + iv * subj_true_effect_per_trial
+  # create a dataframe based on the three columns generated above
+  sampled_data <- data.frame(id = idv, condition = iv, var = dv)
+  return (sampled_data)
+}
+
+
+prepate_data <- function(data) {
+  # transform the dependent variable to RT
+  data$var <- data$var * 10  + 650
+  res_dir <- data %>% get_directional_effect(idv = 'id', dv = 'var', iv = 'condition', summary_function = stats::median)
+  ord_effects <- order(res_dir$effect_per_id$score)
+  res_dir$effect_per_id$orgid <- res_dir$effect_per_id$id[ord_effects]
+  res_dir$effect_per_id$score <- sort(res_dir$effect_per_id$score)
+  
+  res_non_dir <- data %>% get_sign_consistency(idv = 'id', dv = 'var', iv = 'condition', 
+                                               summary_function = stats::median)
+  sc <- res_non_dir$consistency_per_id$score[res_dir$effect_per_id$orgid]
+  res_dir$effect_per_id$sc <- sc
+  
+  data_effects <-  res_dir$effect_per_id %>% 
+    rename(effect = score)
+  
+  # get within participant data frames
+  lowbnd <- .05 / 2
+  highbnd <- 1- lowbnd
+  quantiles <- c(lowbnd, 0.5, highbnd)
+  quantile_cols <- c('low', 'med', 'high') 
+  data_qs <- data %>%
+    group_by(id,condition) %>%
+    summarise(q = quantile_cols,
+              RT = quantile(var, quantiles)) %>%
+    spread(q,RT)
+  data_qs_cong <- data_qs %>% filter(condition == 0)
+  data_qs_incong <- data_qs %>% filter(condition == 1)
+  data_qs_cong <- data_qs_cong[res_dir$effect_per_id$orgid, ]
+  data_qs_cong$id <- 1:nrow(res_dir$effect_per_id)
+  data_qs_incong <- data_qs_incong[res_dir$effect_per_id$orgid, ]
+  data_qs_incong$id <- 1:nrow(res_dir$effect_per_id)
+  
+  return(list(effects = data_effects, qs_incong = data_qs_incong, qs_cong = data_qs_cong))
+}
+
+generate_effects_plot <- function(data, graphics_conf) {
+  plt <- ggplot(data, aes(x = effect, y = id)) +
+    xlab('Effect') +
+    ylab('Subject') +
+    geom_point(size = 3) +
+    geom_hline(yintercept = data$id + graphics_conf$margin_y_subj, 
+               size = graphics_conf$size_seg/2, linetype='dotted', 
+               col = graphics_conf$color_spreading_lines) +
+    geom_vline(xintercept = 0,  size = graphics_conf$vline_size) +
+    theme_classic() +
+    theme(legend.position = 'none',
+          axis.text = element_text(size = graphics_conf$x_text_size),
+          axis.title = element_text(size = graphics_conf$x_title_size),
+          axis.title.y = element_blank(),
+          axis.text.y = element_blank(),
+          axis.ticks.y = element_blank()) +
+    ylim(1, nrow(data)) +
+    scale_y_continuous(breaks = c(1,seq(5, nrow(data), by = 5)))
+  
+  return (plt)
+}
+
+generate_qs_plot <- function(data_qs_cong, data_qs_incong, graphics_conf) {
+  plt <- ggplot(data_qs_cong, aes(y = id)) +
+    geom_segment(data = data_qs_incong, aes(x = low, xend = high, y = id + graphics_conf$margin_y_conds, yend = id + graphics_conf$margin_y_conds),
+                 size = size_seg, colour = graphics_conf$incong_color) +
+    geom_segment(data = data_qs_cong, aes(x = low, xend = high, y = id - graphics_conf$margin_y_conds, 
+                                          yend = id - graphics_conf$margin_y_conds), 
+                 size = size_seg, colour = graphics_conf$cong_color) +
+    geom_segment(data = data_qs_incong, aes(x = med - graphics_conf$legnth_med, xend = med + graphics_conf$legnth_med,  y = id + graphics_conf$margin_y_conds, 
+                                            yend = id + graphics_conf$margin_y_conds), 
+                 size = size_seg, colour = graphics_conf$med_color) +
+    geom_segment(data = data_qs_cong, aes(x = med - graphics_conf$legnth_med, xend = med + graphics_conf$legnth_med, y = id - graphics_conf$margin_y_conds, 
+                                          yend = id - graphics_conf$margin_y_conds), 
+                 size = size_seg, colour = graphics_conf$med_color) +
+    geom_hline(yintercept = data_qs_cong$id + graphics_conf$margin_y_subj, 
+               size = graphics_conf$size_seg/2, linetype='dotted', 
+               col = graphics_conf$color_spreading_lines) +
+    geom_vline(xintercept = mean(data_qs_cong$med),  size = graphics_conf$vline_size) +
+    xlab('RT') +
+    ylab('Subject') +
+    theme_classic() +
+    theme(legend.position = 'none',
+          axis.text = element_text(size = graphics_conf$x_text_size),
+          axis.title = element_text(size = graphics_conf$x_title_size),
+          axis.title.y = element_blank(),
+          axis.text.y = element_blank(),
+          axis.ticks.y = element_blank(),
+          axis.line.y = element_blank()) +
+    ylim(1, nrow(data_qs_cong)) +
+    scale_y_continuous(breaks = c(1,seq(5, nrow(data_effects), by = 5)))
+
+    plt <- ggplot(data, aes(x = effect, y = id)) +
+    xlab('Effect') +
+    ylab('Subject') +
+    geom_point(size = 3) +
+    geom_hline(yintercept = data$id + graphics_conf$margin_y_subj, 
+               size = graphics_conf$size_seg/2, linetype='dotted', 
+               col = graphics_conf$color_spreading_lines) +
+    theme_classic() +
+  
+  return (plt)
+}
+
+generate_agg_plot <- function(data, graphics_conf, rng_ratio = -1) {
+  res <- prepate_data(data)
+  data_effects <- res$effects
+  data_qs_incong <- res$qs_incong
+  data_qs_cong <- res$qs_cong
+  p_left <- generate_effects_plot(data_effects, graphics_conf)  
+  p_right <- generate_qs_plot(data_qs_cong, data_qs_incong, graphics_conf)  
+  
+  
+  if(rng_ratio == -1) {
+    rng_left <- max(data_effects$effect) - min(data_effects$effect) 
+    rng_right <- max(data_qs_incong$high) - min(data_qs_incong$low) 
+    rng_ratio <- rng_right / rng_left
+  }
+  grid.arrange(p_left ,p_right, widths = c(1, rng_ratio), ncol = 2,
+               left = textGrob("Subject", rot = 90, vjust = 1, gp = gpar(fontsize = graphics_conf$x_title_size)))
+  
+  return(rng_ratio)
+}
+
+# configure the graphics of the plot
+graphics_conf <- list(size_seg = 2, color_spreading_lines = '#71E9CC',
+                      margin_y_subj = 0.5, margin_y_conds = 0.125, legnth_med = 2,
+                      incong_color = 'black', cong_color = 'red', med_color = 'gray',
+                      vline_size = 1, x_title_size = 22, x_text_size = 20)
+# generate weaknull plot
+wn_data <- create_sample_data(p_mean = 0, p_sd = 2, N = 15, trials_per_cnd = 500, wSEsd = 1)
+ratio <- generate_agg_plot(wn_data, graphics_conf)
+sn_data <- create_sample_data(p_mean = 0, p_sd = 0, N = 15, trials_per_cnd = 500, wSEsd = 1)
+generate_agg_plot(sn_data, graphics_conf, ratio)
