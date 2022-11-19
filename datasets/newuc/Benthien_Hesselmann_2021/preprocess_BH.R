@@ -81,3 +81,7 @@ f_int_rt <- function(mat) {
 nondir_tst <- test_sign_consistency(data, idv = 'idv', dv = c('dv','iv2'), iv = 'iv', 
                                     null_dist_samples = 10^5, 
                                     summary_function = f_int_rt)
+
+# validate against Table. 1 in the paper
+data %>% group_by(idv, iv2, iv) %>% summarise(m = mean(dv)) %>%
+  group_by(iv2, iv) %>% summarise(m = mean(m))

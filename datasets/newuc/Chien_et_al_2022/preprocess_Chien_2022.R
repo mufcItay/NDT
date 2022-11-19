@@ -31,7 +31,9 @@ agg_data <- do.call(rbind,lapply(data_files, read_full_sheet))
 
 write.csv(agg_data, paste0(study_name,'.csv'))
 
-# weaknull
+get_2a <- get_directional_effect(agg_data[agg_data$exp == '2A',], 'idv','dv','iv', 
+                                 summary_function = mean)
+
 dir_2a <- test_directional_effect(agg_data[agg_data$exp == '2A',], 'idv','dv','iv', 
                                summary_function = mean)
 nondir_2a <- test_sign_consistency(agg_data[agg_data$exp == '2A',], 'idv','dv','iv', 
@@ -46,3 +48,7 @@ dir_2c <- test_directional_effect(agg_data[agg_data$exp == '2C',], 'idv','dv','i
                                   summary_function = mean)
 nondir_2c <- test_sign_consistency(agg_data[agg_data$exp == '2C',], 'idv','dv','iv', 
                                    summary_function = mean)
+
+# validate against the 'Sheet2' sheet of the data - note that we collapse across cong and incong levels
+agg_data[agg_data$exp == '2C',] %>% group_by(idv, condition, iv) %>% summarise(m = mean(dv)) %>%
+  group_by(idv, iv) %>% summarise(m = mean(m))

@@ -26,3 +26,7 @@ read_data_f <- function(dir_name) {
 }
 data <- do.call(rbind, lapply(exps, read_data_f))
 write.csv(data, paste0(study_name,'.csv'))
+
+# validate against Fig 2C (Masking) and 3C )TMS in the paper
+data %>% group_by(exp, idv, iv) %>% summarise(m = mean(dv)) %>%
+  group_by(exp, iv) %>% summarise(m = mean(m)) %>% group_by(exp) %>% summarise(m = -diff(m))

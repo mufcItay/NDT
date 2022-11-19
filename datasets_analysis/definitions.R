@@ -117,16 +117,29 @@ preprocess_dfs_UC <- function(df, ds_name) {
   if(startsWith(ds_name, 'Faivre')) {
     df <- df %>% mutate(dv = log(dv))
   }
-  
   if(! 'iv2' %in% names(df)) { df$iv2 <- rep(NA, nrow(df))} 
   df <- df %>% 
-    select(exp, idv, dv, iv, iv2)
+    dplyr::select(exp, idv, dv, iv, iv2)
+  
   # remove participants with less than 5 observations in a cell
-  exc <- df %>%
-    group_by(exp, idv, iv, iv2) %>%
-    summarise(n = n(), .groups = 'drop_last') %>%
-    filter(n < 5) %>%
-    pull(idv)
+  if(startsWith(ds_name, 'Stein & van Peelen_2020') |
+     startsWith(ds_name, 'Skora et al_2020')) {
+    min_trials <- 1
+    exc <- df %>%
+      group_by(exp, idv, iv, iv2,dv) %>%
+      summarise(n = n(), .groups = 'drop_last') %>%
+      filter(n < min_trials) %>%
+      pull(idv)
+    
+  } else {
+    min_trials <- 5
+    exc <- df %>%
+      group_by(exp, idv, iv, iv2) %>%
+      summarise(n = n(), .groups = 'drop_last') %>%
+      filter(n < min_trials) %>%
+      pull(idv)
+    
+  }
   df <- df %>% filter(! idv %in% exc)
   
   return(df)

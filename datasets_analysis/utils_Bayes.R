@@ -1,5 +1,6 @@
 library(ggplot2)
-
+source('datasets_analysis\\quid.R')
+source('datasets_analysis\\pbt.R')
 plot_figure <- function(res, title, save = TRUE) {
   res %>%
     mutate(dir_sig = (directional_effect.p < .05),
@@ -102,15 +103,8 @@ run_analysis <-function(analysis_conf) {
   # (for the RT analysis we use Median as summary_function, and for the AUC analysis we use get_AUC)
   res <- dfs %>%
     group_by(exp) %>%
-    group_modify(~data.frame(non_directional = test_sign_consistency(.x,'idv', c('dv','iv2'), 'iv',
-                                   null_dist_samples = analysis_conf@n_samp,
-                                   summary_function = sum_fs[[.y[[1]]]])[c('statistic','p')],
-                             directional_effect = test_directional_effect(.x,'idv', c('dv','iv2'), 'iv',
-                                    null_dist_samples = analysis_conf@n_samp,
-                                    summary_function = sum_fs[[.y[[1]]]])[c('statistic','p')]))
-  
-  # adjust p-values of the directional test
-  res <- res %>% mutate(directional_effect.p = 2*min(directional_effect.p, 1-directional_effect.p))
+    group_modify(~data.frame(quid = run_quid(.x)[c('low','high')],
+                             pbt = run_pbt(.x, stats::wilcox.test)[c('low','high')]))
   
   res_dir <- dirname(analysis_conf@results_fn)
   if(!dir.exists(res_dir)) {
@@ -118,5 +112,5 @@ run_analysis <-function(analysis_conf) {
   }
   
   # write results to file
-  write.csv(res, analysis_conf@results_fn)  
+  write.csv(res, 'results\\BAYES_UCDB_Results.csv')  
 }
