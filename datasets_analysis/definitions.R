@@ -147,4 +147,4 @@ preprocess_dfs_UC <- function(df, ds_name) {
 
 UCID_analysis_conf <- new(analysisConfCName, 'datasets\\ucdb\\',
                         'results\\UC_DB.csv', 'results\\UCDB_Results.csv', 
-                        preprocess_dfs_UC, mean)
+                        preprocess_dfs_UC, stats::median)

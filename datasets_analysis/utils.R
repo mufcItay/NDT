@@ -1,4 +1,6 @@
 library(ggplot2)
+source('datasets_analysis\\quid.R')
+source('datasets_analysis\\pbt.R')
 
 plot_figure <- function(res, title, save = TRUE) {
   res %>%
@@ -107,7 +109,9 @@ run_analysis <-function(analysis_conf) {
                                    summary_function = sum_fs[[.y[[1]]]])[c('statistic','p')],
                              directional_effect = test_directional_effect(.x,'idv', c('dv','iv2'), 'iv',
                                     null_dist_samples = analysis_conf@n_samp,
-                                    summary_function = sum_fs[[.y[[1]]]])[c('statistic','p')]))
+                                    summary_function = sum_fs[[.y[[1]]]])[c('statistic','p')],
+                             quid = run_quid(.x)[c('pos_bf')],
+                             pbt = run_pbt(.x, stats::wilcox.test)[c('low','high')]))
   
   # adjust p-values of the directional test
   res <- res %>% mutate(directional_effect.p = 2*min(directional_effect.p, 1-directional_effect.p))
