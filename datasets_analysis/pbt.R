@@ -4,20 +4,22 @@ library(dplyr)
 
 # Assumptions: 
 # 1. variable names are known in advance
-run_pbt <- function(data, test_function, alpha = .05) {
+run_pbt <- function(data, test_function, alpha = .05, hdi_alpha = .05) {
   # run the function only on two conditions, continuous variable datasets
-  if(length(unique(data$iv2)) > 1 | (setequal(unique(data$dv),c(0,1)))) {
-    return (list(low = -99999, high = -99999))
-  }
+  # if(length(unique(data$iv2)) > 1 | (setequal(unique(data$dv),c(0,1)))) {
+  #   return (list(low = -99999, high = -99999))
+  # }
+  print('Analyzing a new exp')
   res_dir <- data %>% 
     group_by(idv) %>%
-    summarise(p= test_function(dv[iv==unique(iv)[1]],dv[iv==unique(iv)[2]])$p.value) %>%
-    mutate(sig=p<alpha)
+    group_modify(~data.frame(p = test_function(.x)))
   # count the prevalence of significant results in each dataset and compare to chance
   N=sum(!is.na(res_dir$p))
-  Nsig = sum(res_dir$p < .05, na.rm=T)
-  resolution <- 10^2
-  prevalence_hdpi = bayesprev_hpdi(.96, Nsig, N)
+  if (N == 0) {
+    browser()
+  }
+  Nsig = sum(res_dir$p < alpha, na.rm=T)
+  prevalence_hdpi = bayesprev_hpdi(1 - hdi_alpha, Nsig, N)
   prev_above_zero <- 0 < prevalence_hdpi[1]
   prevalence_est = bayesprev_map(Nsig, N)
   return (list(low = prevalence_hdpi[1], high = prevalence_hdpi[2]))

@@ -61,3 +61,69 @@ data %>%
   summarise(m = diff(m)) %>%
   group_by(exp) %>%
   summarise(effect = mean(m))
+
+
+########################################### UTILITY
+get_participant_SDT_d <- function(mat, args = list(iv = 'iv', dv = 'dv')) {
+  d <- as.data.frame(mat) %>%
+    group_by(!!dplyr::sym(args$iv), !!dplyr::sym(args$dv), .drop = FALSE) %>%
+    summarise(count = n(), .groups = 'drop_last') %>%
+    ungroup() %>%
+    complete(!!dplyr::sym(args$iv), !!dplyr::sym(args$dv), fill = list(count = 0)) %>% 
+    group_by(!!dplyr::sym(args$iv)) %>% 
+    summarise(rate = ifelse(count[1] == 0, 1 / (2*sum(count)), 
+                            ifelse(count[1] == sum(count), 1- 1 / (2*sum(count)),
+                                   (count[1]) / (sum(count)))), .groups = 'drop_last') %>%
+    summarise(d = (qnorm(rate[1]) - qnorm(rate[2])), .groups = 'drop_last') %>%
+    pull(d)
+  return(d)
+}
+
+perm_test_subject <- function(mat, obs, summary_f, summary_f_args = list(iv = 'iv', dv = 'dv'), 
+                              n_perm = 10^4, two.sided = TRUE) {
+  inner_perm <- function(iteration, mat, summary_f, summary_f_args) {
+    n_trials <- nrow(mat)
+    mat[,summary_f_args$dv] <- mat[sample(n_trials),summary_f_args$dv]
+    return (summary_f(mat, summary_f_args))
+  }
+  
+  if('iv2' %in% summary_f_args) {
+    resamp_f_args <- summary_f_args
+    resamp_f_args$iv = resamp_f_args$iv2 
+    resample_d <- function(iteration, mat) {
+      summary_f(mat[sample(nrow(mat), replace = TRUE), ], resamp_f_args)
+    }
+    conds <- unique(mat[,summary_f_args$iv])
+    library(doParallel)
+    iv1_ds <- sapply (1:n_perm, resample_d, mat=mat[mat[,summary_f_args$iv] == conds[1],])
+    iv2_ds <- sapply (1:n_perm, resample_d, mat=mat[mat[,summary_f_args$iv] == conds[1],])
+    null_dist <- sample(c(-1,1), n_perm, replace = TRUE) * (iv1_ds - iv2_ds)
+  } else {
+    null_dist <- sapply(1:n_perm, inner_perm, mat = mat, 
+                        summary_f = summary_f, summary_f_args = summary_f_args)
+    
+  }
+  p_value <- mean(obs < null_dist, na.rm=TRUE)
+  if(two.sided) {p_value <- 2 * min(p_value, 1 - p_value)}
+  return (p_value)
+}
+
+summary_f <- function(mat) {
+  stein_sum_f_args <- list(iv = 'iv2', dv = 'dv')
+  return (get_participant_SDT_d(mat, stein_sum_f_args))
+}
+test_f <- function(mat) {
+  stein_sum_f_args <- list(iv = 'iv2', dv = 'dv')
+  conds <- unique(mat$iv)
+  obs_d_diff <- get_participant_SDT_d(mat[mat$iv == conds[1],], stein_sum_f_args) - 
+    get_participant_SDT_d(mat[mat$iv == conds[2],], stein_sum_f_args)
+  
+  return(perm_test_subject(as.matrix(mat), obs_d_diff, get_participant_SDT_d,  summary_f_args =  
+                             list(iv = 'iv', dv = 'dv', iv2 = 'iv2')))
+}
+
+########################################### UTILITY
+
+# summary_f(data_exp3_loc[data_exp3_loc$idv == 1 & data_exp3_loc$iv == 1,])
+res <- data %>% filter(exp == 'Zerweck et al_2021_2_20') %>% group_by(idv) %>% 
+  group_modify(~data.frame(p = test_f(.x)))

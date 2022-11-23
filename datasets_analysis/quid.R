@@ -9,10 +9,11 @@ run_quid <- function(data) {
      (setequal(unique(data$dv),c(0,1)))) {
     return (list(pos_bf = -99999))
   }
+  
   conditions <- unique(data$iv)
   data$idv <- as.numeric(factor(data$idv))
   data$iv <- as.numeric(factor(data$iv))
   res <- quid(id = data$idv, condition = data$iv, rt = data$dv)
   # indicating how much evidence we see for qualitative differences between individuals
-  return (list(pos_bf = res$bfs['bf.pu']))
+  return (list(pos_bf = res$bfs['bf.0u']))
 }
