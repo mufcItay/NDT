@@ -1,7 +1,6 @@
 library(weaknull)
 library(dplyr)
 library(readxl)
-library(psycho)
 library(tidyr)
 set.seed(121)
 
@@ -63,3 +62,27 @@ mean(df_d[df_d$exp == 'Skora et al_2020_1' & !is.nan(df_d$d),]$d, na.rm = TRUE)
 length(df_d[df_d$exp == 'Skora et al_2020_1' & !is.nan(df_d$d),]$d)
 mean(df_d[df_d$exp == 'Skora et al_2020_2' & !is.nan(df_d$d),]$d, na.rm = TRUE)
 length(df_d[df_d$exp == 'Skora et al_2020_2' & !is.nan(df_d$d),]$d)
+
+
+get_participant_SDT_d <- function(mat, args = list(iv = 'iv', dv = 'dv')) {
+  mat <- as.data.frame(mat)
+  conds <- sort(unique(mat[,args$iv]))
+  calc_rate_nrom <- function(cnd, mat) {
+    cnd_dat <- mat[mat[,args$iv] == cnd,]
+    cnt <- sum(cnd_dat[,args$dv])
+    len <- length(cnd_dat[,args$dv]) 
+    rate <- ifelse(cnt == 0, 1 / (2*len), 
+                   ifelse(cnt == len, 1- 1 / (2*len), cnt / len))
+    return (qnorm(rate))
+  }
+  rate_norms <- sapply(conds, calc_rate_nrom, mat = mat)
+  return (diff(rate_norms))
+}
+
+hist(data %>% filter(exp == 'Skora et al_2020_2') %>%
+  group_by(idv) %>%
+  group_modify(~data.frame(d = get_participant_SDT_d(.x))) %>%
+  pull(d))
+
+get_participant_SDT_d(data %>% filter(exp == 'Skora et al_2020_1',
+                                      idv == 100) %>% select (dv, iv))

@@ -36,19 +36,20 @@ get_input_df <- function(analysis_conf) {
   return(df_all)
 }
 
+
 get_participant_SDT_d <- function(mat, args = list(iv = 'iv', dv = 'dv')) {
-  d <- as.data.frame(mat) %>%
-    group_by(!!dplyr::sym(args$iv), !!dplyr::sym(args$dv), .drop = FALSE) %>%
-    summarise(count = n(), .groups = 'drop_last') %>%
-    ungroup() %>%
-    complete(!!dplyr::sym(args$iv), !!dplyr::sym(args$dv), fill = list(count = 0)) %>% 
-    group_by(!!dplyr::sym(args$iv)) %>% 
-    summarise(rate = ifelse(count[1] == 0, 1 / (2*sum(count)), 
-                            ifelse(count[1] == sum(count), 1- 1 / (2*sum(count)),
-                            (count[1]) / (sum(count)))), .groups = 'drop_last') %>%
-    summarise(d = (qnorm(rate[1]) - qnorm(rate[2])), .groups = 'drop_last') %>%
-    pull(d)
-  return(d)
+  mat <- as.data.frame(mat)
+  conds <- sort(unique(mat[,args$iv]))
+  calc_rate_nrom <- function(cnd, mat) {
+    cnd_dat <- mat[mat[,args$iv] == cnd,]
+    cnt <- sum(cnd_dat[,args$dv])
+    len <- length(cnd_dat[,args$dv]) 
+    rate <- ifelse(cnt == 0, 1 / (2*len), 
+                   ifelse(cnt == len, 1- 1 / (2*len), cnt / len))
+    return (qnorm(rate))
+  }
+  rate_norms <- sapply(conds, calc_rate_nrom, mat = mat)
+  return (diff(rate_norms))
 }
 
 calc_effect <- function(mat, args = list(summary_f = mean, iv = 'iv', dv = 'dv')) {
@@ -64,8 +65,7 @@ perm_test_subject <- function(mat, obs, summary_f, summary_f_args = list(iv = 'i
   if('iv2' %in% summary_f_args) {
     resamp_f_args <- summary_f_args
     resamp_f_args$iv = resamp_f_args$iv2
-    browser()
-    
+
     n_trials <- nrow(mat)
     conds <- unique(mat$iv)
     inner_perm <- function(iteration, mat, summary_f, summary_f_args) {
@@ -93,11 +93,14 @@ perm_test_subject <- function(mat, obs, summary_f, summary_f_args = list(iv = 'i
 get_sum_fs <- function(analysis_conf, experiments) {
   map_f_to_exp <- function(exp_name) {
     if(startsWith(exp_name,'Skora et al_2020')) {
-      # d' as a dependent measure
       summary_f <- function(mat) {
-        rate <- (sum(mat[,'dv']) + .1) / (length(mat[,'dv']) + .1)
+        cnt <- sum(mat[,'dv'])
+        len <- length(mat[,'dv']) 
+        rate <- ifelse(cnt == 0, 1 / (2*len), 
+                       ifelse(cnt == len, 1- 1 / (2*len), cnt / len))
         return (qnorm(rate))
       }
+
       test_f <- function(mat) {
         obs_d <- get_participant_SDT_d(mat)
         return(perm_test_subject(as.data.frame(mat), obs_d, get_participant_SDT_d))
@@ -108,7 +111,7 @@ get_sum_fs <- function(analysis_conf, experiments) {
         return (get_participant_SDT_d(mat, svp_args))
       }
       test_f <- function(mat) {
-        conds <- unique(mat$iv)
+        conds <- sort(unique(mat$iv))
         obs <- get_participant_SDT_d(mat[mat$iv == conds[1],], svp_args) - 
           get_participant_SDT_d(mat[mat$iv == conds[2],], svp_args)
         return(perm_test_subject(as.data.frame(mat), obs, get_participant_SDT_d,  summary_f_args =  
@@ -117,9 +120,6 @@ get_sum_fs <- function(analysis_conf, experiments) {
     } else if(startsWith(exp_name,'Benthien & Hesselmann_2021')) {
       bh_args <- list(idv = 'idv', iv = 'iv', iv2 = 'iv2', dv = 'dv', summary_f = analysis_conf@summary_f)
       summary_f <- function(mat) {
-        # args <- bh_args
-        # args$iv = 'iv2'
-        # calc_effect(mat, args = args)
         res<- analysis_conf@summary_f(mat[mat[,'iv2'] == 0, 'dv']) - 
           analysis_conf@summary_f(mat[mat[,'iv2'] == 1, 'dv'])
         return(res) 
@@ -135,9 +135,13 @@ get_sum_fs <- function(analysis_conf, experiments) {
       }
     } else {
       summary_f <- function(mat) {
+        if(is.null(nrow(mat))) {
+          return (mat[names(mat) == 'dv'])
+        } 
         return(analysis_conf@summary_f(mat[,'dv']))
       }
       test_f <- function(mat) {
+        mat <- as.data.frame(mat)
         return(wilcox.test(mat[mat$iv==unique(mat$iv)[1],]$dv, 
                     mat[mat$iv==unique(mat$iv)[2],]$dv)$p.value)}
     }
@@ -159,16 +163,15 @@ run_analysis <-function(analysis_conf) {
   res <- dfs %>%
     group_by(exp) %>%
     group_modify(~data.frame(
-      # non_directional = test_sign_consistency(.x,'idv', c('dv','iv2'), 'iv',
-      #                              null_dist_samples = analysis_conf@n_samp,
-      #                              summary_function = analysis_fs[[.y[[1]]]]$summary)[c('statistic','p')],
-      #                        directional_effect = test_directional_effect(.x,'idv', c('dv','iv2'), 'iv',
-      #                               null_dist_samples = analysis_conf@n_samp,
-      #                               summary_function = analysis_fs[[.y[[1]]]]$summary)[c('statistic','p')],
-      #                        quid = run_quid(.x)[c('pos_bf')],
+      non_directional = test_sign_consistency(.x,'idv', c('dv','iv2'), 'iv',
+                                   null_dist_samples = analysis_conf@n_samp,
+                                   summary_function = analysis_fs[[.y[[1]]]]$summary)[c('statistic','p')],
+                             directional_effect = test_directional_effect(.x,'idv', c('dv','iv2'), 'iv',
+                                    null_dist_samples = analysis_conf@n_samp,
+                                    summary_function = analysis_fs[[.y[[1]]]]$summary)[c('statistic','p')],
+                             quid = run_quid(.x)[c('pos_bf')],
       pbt = run_pbt(.x, analysis_fs[[.y[[1]]]]$test)[c('low','high')]))
   
-  browser()
   # adjust p-values of the directional test
   res <- res %>% mutate(directional_effect.p = 2*min(directional_effect.p, 1-directional_effect.p))
   
