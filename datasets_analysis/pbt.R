@@ -5,10 +5,6 @@ library(dplyr)
 # Assumptions: 
 # 1. variable names are known in advance
 run_pbt <- function(data, test_function, alpha = .05, hdi_alpha = .05) {
-  # run the function only on two conditions, continuous variable datasets
-  # if(length(unique(data$iv2)) > 1 | (setequal(unique(data$dv),c(0,1)))) {
-  #   return (list(low = -99999, high = -99999))
-  # }
   print('Analyzing a new exp')
   res_dir <- data %>% 
     group_by(idv) %>%

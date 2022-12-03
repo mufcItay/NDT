@@ -1,12 +1,11 @@
 library(weaknull)
 library(ggplot2)
-library(extraDistr)
 library(dplyr)
 library(tidyverse)
 library(gridExtra)
 library(gtable)
 library(grid)
-
+rm(list = ls())
 
 ## from the weak null packages (not included)
 #' Create Sample Data
@@ -112,16 +111,16 @@ generate_effects_plot <- function(data, graphics_conf) {
 generate_qs_plot <- function(data_qs_cong, data_qs_incong, graphics_conf) {
   plt <- ggplot(data_qs_cong, aes(y = id)) +
     geom_segment(data = data_qs_incong, aes(x = low, xend = high, y = id + graphics_conf$margin_y_conds, yend = id + graphics_conf$margin_y_conds),
-                 size = size_seg, colour = graphics_conf$incong_color) +
+                 size = graphics_conf$size_seg, colour = graphics_conf$incong_color) +
     geom_segment(data = data_qs_cong, aes(x = low, xend = high, y = id - graphics_conf$margin_y_conds, 
                                           yend = id - graphics_conf$margin_y_conds), 
-                 size = size_seg, colour = graphics_conf$cong_color) +
+                 size = graphics_conf$size_seg, colour = graphics_conf$cong_color) +
     geom_segment(data = data_qs_incong, aes(x = med - graphics_conf$legnth_med, xend = med + graphics_conf$legnth_med,  y = id + graphics_conf$margin_y_conds, 
                                             yend = id + graphics_conf$margin_y_conds), 
-                 size = size_seg, colour = graphics_conf$med_color) +
+                 size = graphics_conf$size_seg, colour = graphics_conf$med_color) +
     geom_segment(data = data_qs_cong, aes(x = med - graphics_conf$legnth_med, xend = med + graphics_conf$legnth_med, y = id - graphics_conf$margin_y_conds, 
                                           yend = id - graphics_conf$margin_y_conds), 
-                 size = size_seg, colour = graphics_conf$med_color) +
+                 size = graphics_conf$size_seg, colour = graphics_conf$med_color) +
     geom_hline(yintercept = data_qs_cong$id + graphics_conf$margin_y_subj, 
                size = graphics_conf$size_seg/2, linetype='dotted', 
                col = graphics_conf$color_spreading_lines) +
@@ -137,7 +136,7 @@ generate_qs_plot <- function(data_qs_cong, data_qs_incong, graphics_conf) {
           axis.ticks.y = element_blank(),
           axis.line.y = element_blank()) +
     ylim(1, nrow(data_qs_cong)) +
-    scale_y_continuous(breaks = c(1,seq(5, nrow(data_effects), by = 5)))
+    scale_y_continuous(breaks = c(1,seq(5, nrow(data_qs_cong), by = 5)))
 
     plt <- ggplot(data, aes(x = effect, y = id)) +
     xlab('Effect') +
