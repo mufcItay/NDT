@@ -33,8 +33,9 @@ get_sum_fs_confidence <- function(analysis_conf, experiments) {
     }
     test_f <- function(mat) {
       mat <- as.data.frame(mat)
-      return(wilcox.test(mat[mat$iv==unique(mat$iv)[1],]$dv, 
-                    mat[mat$iv==unique(mat$iv)[2],]$dv)$p.value)
+      conds <- sort(unique(mat$iv))
+      return(wilcox.test(mat[mat$iv==conds[1],]$dv, 
+                    mat[mat$iv==conds[2],]$dv)$p.value)
     }
     return(list(summary = summary_f, test = test_f))
   }

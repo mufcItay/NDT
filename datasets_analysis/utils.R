@@ -70,3 +70,42 @@ run_analysis <-function(analysis_conf) {
   # write results to file
   write.csv(res, analysis_conf@results_fn)  
 }
+
+perm_test_subject <- function(mat, obs, summary_f, summary_f_args = list(iv = 'iv', dv = 'dv'), 
+                              n_perm = 10^4, two.sided = TRUE) {
+  if('iv2' %in% summary_f_args) {
+    resamp_f_args <- summary_f_args
+    resamp_f_args$iv = resamp_f_args$iv2
+    
+    n_trials <- nrow(mat)
+    conds <- unique(mat$iv)
+    inner_perm <- function(iteration, mat, summary_f, summary_f_args) {
+      mat[,summary_f_args$iv] <- mat[sample(n_trials),summary_f_args$iv]
+      return (summary_f(mat[mat$iv == conds[1],], resamp_f_args) -
+                summary_f(mat[mat$iv == conds[2],], resamp_f_args))
+    }
+    null_dist <- sapply(1:n_perm, inner_perm, mat = mat, 
+                        summary_f = summary_f, summary_f_args = summary_f_args)
+  } else {
+    inner_perm <- function(iteration, mat, summary_f, summary_f_args) {
+      n_trials <- nrow(mat)
+      mat[,summary_f_args$dv] <- mat[sample(n_trials),summary_f_args$dv]
+      return (summary_f(mat, summary_f_args))
+    }
+    null_dist <- sapply(1:n_perm, inner_perm, mat = mat, 
+                        summary_f = summary_f, summary_f_args = summary_f_args)
+  }
+  p_value <- mean(obs < null_dist, na.rm=TRUE)
+  if(two.sided) {p_value <- 2 * min(p_value, 1 - p_value)}
+  return (p_value)
+}
+
+get_diff_effect <- function(mat, args = list(summary_f = mean, iv = 'iv', dv = 'dv')) {
+  return (as.data.frame(mat) %>% 
+            group_by(!!dplyr::sym(args$iv)) %>% 
+            summarise(val = args$summary_f(!!dplyr::sym(args$dv))) %>% 
+            summarise(effect = diff(val)) %>% 
+            pull(effect))
+}  
+
+

@@ -14,43 +14,6 @@ get_participant_SDT_d <- function(mat, args = list(iv = 'iv', dv = 'dv')) {
   return (diff(rate_norms))
 }
 
-calc_effect <- function(mat, args = list(summary_f = mean, iv = 'iv', dv = 'dv')) {
-  return (as.data.frame(mat) %>% 
-            group_by(!!dplyr::sym(args$iv)) %>% 
-            summarise(val = args$summary_f(!!dplyr::sym(args$dv))) %>% 
-            summarise(effect = diff(val)) %>% 
-            pull(effect))
-}  
-
-perm_test_subject <- function(mat, obs, summary_f, summary_f_args = list(iv = 'iv', dv = 'dv'), 
-                              n_perm = 10^4, two.sided = TRUE) {
-  if('iv2' %in% summary_f_args) {
-    resamp_f_args <- summary_f_args
-    resamp_f_args$iv = resamp_f_args$iv2
-    
-    n_trials <- nrow(mat)
-    conds <- unique(mat$iv)
-    inner_perm <- function(iteration, mat, summary_f, summary_f_args) {
-      mat[,summary_f_args$iv] <- mat[sample(n_trials),summary_f_args$iv]
-      return (summary_f(mat[mat$iv == conds[1],], resamp_f_args) -
-                summary_f(mat[mat$iv == conds[2],], resamp_f_args))
-    }
-    null_dist <- sapply(1:n_perm, inner_perm, mat = mat, 
-                        summary_f = summary_f, summary_f_args = summary_f_args)
-  } else {
-    inner_perm <- function(iteration, mat, summary_f, summary_f_args) {
-      n_trials <- nrow(mat)
-      mat[,summary_f_args$dv] <- mat[sample(n_trials),summary_f_args$dv]
-      return (summary_f(mat, summary_f_args))
-    }
-    null_dist <- sapply(1:n_perm, inner_perm, mat = mat, 
-                        summary_f = summary_f, summary_f_args = summary_f_args)
-  }
-  p_value <- mean(obs < null_dist, na.rm=TRUE)
-  if(two.sided) {p_value <- 2 * min(p_value, 1 - p_value)}
-  return (p_value)
-}
-
 preprocess_dfs_UC <- function(df, ds_name) {
   # special treatment of the multisensory experiment (they used log(rt))
   if(startsWith(ds_name, 'Faivre')) {
@@ -122,11 +85,11 @@ get_sum_fs_UC <- function(analysis_conf, experiments) {
       test_f <- function(mat) {
         args <- bh_args
         args$iv = 'iv2'
-        conds <- unique(mat$iv)
-        obs <- calc_effect(mat[mat$iv == conds[1],], args = args) -
-          calc_effect(mat[mat$iv == conds[2],], args = args)
-        perm_test_subject(as.data.frame(mat), obs, summary_f = calc_effect, 
-                          summary_f_args = bh_args)
+        conds <- sort(unique(mat$iv))
+        obs <- get_diff_effect(mat[mat$iv == conds[1],], args = args) -
+          get_diff_effect(mat[mat$iv == conds[2],], args = args)
+        return(perm_test_subject(as.data.frame(mat), obs, summary_f = get_diff_effect, 
+                          summary_f_args = bh_args))
       }
     } else {
       summary_f <- function(mat) {
@@ -137,8 +100,9 @@ get_sum_fs_UC <- function(analysis_conf, experiments) {
       }
       test_f <- function(mat) {
         mat <- as.data.frame(mat)
-        return(wilcox.test(mat[mat$iv==unique(mat$iv)[1],]$dv, 
-                           mat[mat$iv==unique(mat$iv)[2],]$dv)$p.value)}
+        conds <- sort(unique(mat$iv))
+        return(wilcox.test(mat[mat$iv==conds[1],]$dv, 
+                           mat[mat$iv==conds[2],]$dv)$p.value)}
     }
     return(list(summary = summary_f, test = test_f))
   }

@@ -71,3 +71,11 @@ UCID_analysis_conf <- new(analysisConfCName, 'datasets\\ucdb\\',
                         'results\\UC_DB.csv', 'results\\UCDB_Results.csv', 
                         preprocess_dfs_UC, stats::median,
                         sum_fs = get_sum_fs_UC)
+
+## cogdb analysis
+source(paste(dir_path, paste0(defs_prefix, '_cogdb.R'), 
+             sep = .Platform$file.sep))
+cogdb_analysis_conf <- new(analysisConfCName, 'datasets\\cogdb\\',
+                          'results\\UC_DB.csv', 'results\\cogdb_Results.csv', 
+                          preprocess_dfs_cogdb, stats::median,
+                          sum_fs = get_sum_fs_cogdb)
