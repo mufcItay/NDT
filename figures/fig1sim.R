@@ -137,16 +137,16 @@ generate_qs_plot <- function(data_qs_cong, data_qs_incong, graphics_conf) {
           axis.line.y = element_blank()) +
     ylim(1, nrow(data_qs_cong)) +
     scale_y_continuous(breaks = c(1,seq(5, nrow(data_qs_cong), by = 5)))
-
-    plt <- ggplot(data, aes(x = effect, y = id)) +
-    xlab('Effect') +
-    ylab('Subject') +
-    geom_point(size = 3) +
-    geom_hline(yintercept = data$id + graphics_conf$margin_y_subj, 
-               size = graphics_conf$size_seg/2, linetype='dotted', 
-               col = graphics_conf$color_spreading_lines) +
-    theme_classic() +
-  
+# 
+#     plt <- ggplot(data, aes(x = effect, y = id)) +
+#     xlab('Effect') +
+#     ylab('Subject') +
+#     geom_point(size = 3) +
+#     geom_hline(yintercept = data$id + graphics_conf$margin_y_subj, 
+#                size = graphics_conf$size_seg/2, linetype='dotted', 
+#                col = graphics_conf$color_spreading_lines) +
+#     theme_classic() +
+#   
   return (plt)
 }
 
@@ -178,5 +178,5 @@ graphics_conf <- list(size_seg = 2, color_spreading_lines = '#71E9CC',
 # generate weaknull plot
 wn_data <- create_sample_data(p_mean = 0, p_sd = 2, N = 15, trials_per_cnd = 500, wSEsd = 1)
 ratio <- generate_agg_plot(wn_data, graphics_conf)
-sn_data <- create_sample_data(p_mean = 0, p_sd = 0, N = 15, trials_per_cnd = 500, wSEsd = 1)
+sn_data <- create_sample_data(p_mean = 0, p_sd = 0, N = 15, trials_per_cnd = 100, wSEsd = 10)
 generate_agg_plot(sn_data, graphics_conf, ratio)
