@@ -58,9 +58,8 @@ run_analysis <-function(analysis_conf) {
   
   # adjust p-values of the directional test
   if('directional_effect.p' %in% names(res)){
-    
+    res <- res %>% mutate(directional_effect.p = 2*min(directional_effect.p, 1-directional_effect.p))
   }
-  res <- res %>% mutate(directional_effect.p = 2*min(directional_effect.p, 1-directional_effect.p))
   
   res_dir <- dirname(analysis_conf@results_fn)
   if(!dir.exists(res_dir)) {
