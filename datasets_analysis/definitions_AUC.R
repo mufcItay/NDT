@@ -1,5 +1,13 @@
 library(pracma)
-# a summary function for the calculation of AUC
+source('datasets_analysis\\definitions.R')
+#' get_AUC
+#' A summary function for the calculation of AUC
+
+#' @param mat a matrix of the accuracy and confidence scores (columns) for each trial (rows).
+#' The accuracy column is coded as 'iv2', and the confidence column is coded as 'dv'.
+#' NA is returned if the matrix misses one category of accuracy scores or if the matrix dimensions
+#' are not as expected
+#' @return the calculated AUC measure
 get_AUC <- function(mat){
   if(length(dimnames(mat) [[2]]) <2) {
     # not enough trials overall
@@ -18,7 +26,15 @@ get_AUC <- function(mat){
   return(AUC)
 }
 
-# create an instance of the analysis configuration for the confidence DB
+#' preprocess_dfs_AUC
+#' The function preprocesses a single dataset to fit with the AUC analysis.
+#' Datasets for which #Responses != 2, or datasets that do not include an 'Accuracy' column are not included. 
+#' participants with less than ten observations in each condition are excluded.
+#' @param df a dataframe with the shape (#Participants X #Trials) X (Subj_idx, Accuracy, Confidence, Response)
+#' @param ds_name the name of the data frame to preprocess
+#' @return a preprocessed dataframe with the shape (#Participants X #Trials) X (idv, iv, iv2, dv),
+#' where idv is the identifier of participants, iv is the response category, iv2 is
+#' the accuracy score, and dv is the confidence score
 preprocess_dfs_AUC <- function(df, ds_name) {
   if((!'Accuracy' %in% names(df)) || length(unique(df$Response)) != 2) {
     return (data.frame())
@@ -41,14 +57,18 @@ preprocess_dfs_AUC <- function(df, ds_name) {
   return(df)
 }
 
-# retrieves the database to analyze (including all individual experiments)
+#' get_sum_fs_AUC
+#' The function sets the relevant summary and test functions for each dataset
+#' @param analysis_conf the general analysis condfiguration class
+#' @param experiments the name of the experiments to set summary and test functions for
+#' @return a list of functions to use as summary and test functions for each dataset
 get_sum_fs_AUC <- function(analysis_conf, experiments) {
   map_f_to_exp <- function(exp_name) {
     summary_f <- function(mat) {
       return (analysis_conf@summary_f(mat))
     }
     test_f <- function(mat) {
-      return(-999)
+      return(INVALID_VALUE_CODE)
     }
     return(list(summary = summary_f, test = test_f))
   }

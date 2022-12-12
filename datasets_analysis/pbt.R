@@ -2,28 +2,35 @@
 library(nleqslv)
 library(dplyr)
 
-# Assumptions: 
-# 1. variable names are known in advance
-run_pbt <- function(data, test_function, alpha = .05, hdi_alpha = .05) {
+#' run_pbt
+#' The function runs the PBT solution on the given dataset.
+#' @param data a dataframe with the shape (#Participants X #Trials) X (idv, iv, iv2, dv),
+#' where idv is the identifier of each participant, iv is the experimental condition, iv2 
+#' if the hypothesis is on an interaction, or if the dependent measure is calculated
+#' from more than one variable,and dv is the dependent measure
+#' @param test_function a function to use for testing for an effect at the participant-level
+#' @param alpha alpha level to determine significance at the participant-level
+#' @param hdi_alpha the width of the HDI to compute on prevalence score
+#'
+#' @return a list including the low and high bounds of the HDI for the prevalence of the effect
+run_pbt <- function(data, test_function, alpha = .05, hdi_width = .95) {
   print('Analyzing a new exp')
   res_dir <- data %>% 
     group_by(idv) %>%
     group_modify(~data.frame(p = test_function(.x)))
   # count the prevalence of significant results in each dataset and compare to chance
   N=sum(!is.na(res_dir$p))
-  if (N == 0) {
-    browser()
-  }
   Nsig = sum(res_dir$p < alpha, na.rm=T)
-  prevalence_hdpi = bayesprev_hpdi(1 - hdi_alpha, Nsig, N)
+  prevalence_hdpi = bayesprev_hpdi(hdi_width, Nsig, N)
   prev_above_zero <- 0 < prevalence_hdpi[1]
   prevalence_est = bayesprev_map(Nsig, N)
   return (list(low = prevalence_hdpi[1], high = prevalence_hdpi[2]))
 }
 
-
-# Copied from Ince et al. 2021 repository (eLife paper):
-# https://github.com/robince/bayesian-prevalence/tree/master/R
+#################################################################
+# Copied from Ince et al. 2021 repository (eLife paper):        #
+# https://github.com/robince/bayesian-prevalence/tree/master/R  #
+#################################################################
 
 bayesprev_map <- function(k, n, a=0.05, b=1) {
   # Bayesian maximum a posteriori estimate of population prevalence gamma

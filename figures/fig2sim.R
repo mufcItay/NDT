@@ -5,16 +5,32 @@ library(tidyverse)
 library(gridExtra)
 library(gtable)
 library(grid)
+source('datasets_analysis\\definitions.R')
 
-generate_NDT_plot <- function(data, graphics_conf, eps = 1/10^5) {
+# set alpha value
+alpha <- .05
+invalid_quid_res <- INVALID_VALUE_CODE
+
+
+#' generate_NDT_plot
+#' The function generates the sign-consistency (non-directional test) results sub-plot
+#' @param data a dataframe with the results of the sign-consistency solution. The shape of 
+#' the dataframe is (#Datasets) X (exp, p), where 'exp' is the name of the experiment (and
+#' respective dataset), and 'p' is the p-value according to the sign-consistency solution. 
+#' @param graphics_conf a list with different graphics configurations to be used by
+#' @param alpha an alpha value highlight significant results
+#' @param eps an epsilon value to be used when transforming p-values to log values 
+#'
+#' @return the plot describing the results of the (non-directional) sign-consistency test
+generate_NDT_plot <- function(data, graphics_conf, alpha = .05, eps = 1/10^5) {
   data <- data %>%
-    mutate(effect = p < .05, p = log10(p + eps))
+    mutate(effect = p < alpha, p = log10(p + eps))
   plt <- ggplot(data, aes(x = exp, y = p, color = effect)) +
     xlab('Experiment') +
     ylab(graphics_conf$y_title) +
     geom_point(size = 5) +
     ylim(min(data$p) - .1, max(data$p) + .1) +
-    geom_hline(yintercept = log10(0.05), linetype='dotted') +
+    geom_hline(yintercept = log10(alpha), linetype='dotted') +
     theme_classic() +
     scale_color_manual(breaks = c(TRUE,FALSE),
                        values=c(graphics_conf$significant_color,
@@ -28,6 +44,16 @@ generate_NDT_plot <- function(data, graphics_conf, eps = 1/10^5) {
 }
 
 
+#' generate_quid_plot
+#' The function generates the QUID results sub-plot
+#' @param data a dataframe with the results of the QUID solution. The shape of 
+#' the dataframe is (#Datasets) X (exp, quid_bf), where 'exp' is the name of the experiment (and
+#' respective dataset), and 'quid_bg' is the Bayes Factor according to the solution. 
+#' @param graphics_conf a list with different graphics configurations to be used by
+#' @param criteria an Bayesian factors criteria to highlight convincing effects
+#' @param eps an epsilon value to be used when transforming p-values to log values 
+#'
+#' @return the plot describing the results of the QUID test
 generate_quid_plot <- function(data, graphics_conf, criteria = 3, eps = 1/10^5) {
   data <- data %>%
     mutate(effect = quid_bf < 1/criteria, log_bf = log10(quid_bf + eps))
@@ -50,6 +76,15 @@ generate_quid_plot <- function(data, graphics_conf, criteria = 3, eps = 1/10^5) 
   return (plt)
 }
 
+#' generate_pbt_plot
+#' The function generates the PBT results sub-plot
+#' @param data a dataframe with the results of the QUID solution. The shape of 
+#' the dataframe is (#Datasets) X (exp, pbt.low, pbt.high), where 'exp' is the name of 
+#' the experiment (and respective dataset), 'pbt.low' and 'pbt.high' are the lower,
+#' and higher bounds of the HDI according to the solution. 
+#' @param graphics_conf a list with different graphics configurations to be used by
+#'
+#' @return the plot describing the results of the PBT test
 generate_pbt_plot <- function(data, graphics_conf) {
   data$effect <- data$pbt.low > 0
   plt <- ggplot(data, aes(x = exp, color = effect)) +
@@ -74,52 +109,38 @@ generate_pbt_plot <- function(data, graphics_conf) {
   return (plt)
 }
 
-generate_agg_plot <- function(data, graphics_conf, rng_ratio = -1) {
-  res <- prepate_data(data)
-  data_effects <- res$effects
-  data_qs_incong <- res$qs_incong
-  data_qs_cong <- res$qs_cong
-  p_left <- generate_effects_plot(data_effects, graphics_conf)  
-  p_right <- generate_qs_plot(data_qs_cong, data_qs_incong, graphics_conf)  
-  
-  
-  if(rng_ratio == -1) {
-    rng_left <- max(data_effects$effect) - min(data_effects$effect) 
-    rng_right <- max(data_qs_incong$high) - min(data_qs_incong$low) 
-    rng_ratio <- rng_right / rng_left
-  }
-  grid.arrange(p_left ,p_right, widths = c(1, rng_ratio), ncol = 2,
-               left = textGrob("Subject", rot = 90, gp = gpar(fontsize = graphics_conf$x_title_size)))
-  
-  return(rng_ratio)
-}
 
-# configure the graphics of the plot
+# configure the graphics of the figure
 graphics_conf <- list(size_seg = 2, color_spreading_lines = '#71E9CC',
                       margin_y_subj = 0.5, margin_y_conds = 0.125, legnth_med = 2,
                       ns_color = 'black', significant_color = 'red', med_color = 'gray',
                       vline_size = 1, x_title_size = 22, x_text_size = 16)
-# generate agg plot
+# read the results of the UC database 
 res_summary_fn <- 'UCDB_Results.csv'
-invalid_quid_res <- -99999
 results <- read.csv(paste('results', res_summary_fn, sep=.Platform$file.sep))
 
+# get only n.s results in the directional test for effects for which we could use all tests
 results_RT <- results %>%
-  filter(pos_bf != invalid_quid_res, directional_effect.p > .05) %>%
+  filter(pos_bf != invalid_quid_res, directional_effect.p > alpha) %>%
   rename(quid_bf = pos_bf)
+
+# generate the PBT sub-plot
 pbt_res <- results_RT %>% select(exp, pbt.high,pbt.low)
 plt_pbt <- generate_pbt_plot(pbt_res,graphics_conf)
 plt_pbt
 
+# generate the QUID sub-plot
 quid_res <- results_RT %>% select(exp, quid_bf)
 plt_quid <- generate_quid_plot(quid_res,graphics_conf)
 plt_quid
 
+# generate the NDT sub-plot
 graphics_conf$y_title <- 'Sign-Consistency - log(p)'
 nondir_res <- results %>% select(exp, non_directional.p) %>% rename(p = non_directional.p)
 plt_nondir <- generate_NDT_plot(nondir_res,graphics_conf)
 plt_nondir
 
+# generate the directional test sub-plot
 graphics_conf$y_title <- 'Directional - log(p)'
 nondir_res <- results %>% select(exp, directional_effect.p) %>% rename(p = directional_effect.p)
 plt_dir <- generate_NDT_plot(nondir_res,graphics_conf)
@@ -127,8 +148,9 @@ plt_dir <- plt_dir + theme(axis.text.x = element_blank(),
                 axis.ticks.x = element_blank(),
                 axis.title.x = element_blank())
 
-
+# aggregate together the Bayesian tests resutlts (PBT & QUID)
 plt_bayes <- grid.arrange(plt_pbt, plt_quid, ncol = 1)
 ggsave('figures\\bayes_methods_res.svg', width=15, height=12,plot = plt_bayes)
+# aggregate together the NHST tests resutlts (Sign-Consistency & Directional permutations)
 plt_nhst <- grid.arrange(plt_dir, plt_nondir, ncol = 1, heights = c(0.5, 1))
 ggsave('figures\\plt_nhst_methods_res.svg', width=15, height=12,plot = plt_nhst)

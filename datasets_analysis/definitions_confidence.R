@@ -1,4 +1,13 @@
-prep_confidence <- function(df, ds_name) {
+#' preprocess_dfs_cdb
+#' The function preprocesses a single dataset to fit with the analysis of confidence scores.
+#' participants with less than two observations in each condition are excluded.
+#' @param df a dataframe with the shape (#Participants X #Trials) X (Subj_idx, Response, Confidence)
+#' @param ds_name the name of the data frame to preprocess
+#' @return a preprocessed dataframe with the shape (#Participants X #Trials) X (idv, iv, iv2, dv),
+#' where idv is the identifier of participants, iv is the response, iv2 is set to NA
+#' unless the datasets includes an interaction analysis, or if the dependent measure is calculated
+#' from more than one variable,and dv is the confidence measure
+preprocess_dfs_cdb <- function(df, ds_name) {
   if(length(unique(df$Response)) != 2) {
     return (data.frame())
   }
@@ -21,7 +30,11 @@ prep_confidence <- function(df, ds_name) {
   return (df)
 }
 
-# retrieves the database to analyze (including all individual experiments)
+#' get_sum_fs_confidence
+#' The function sets the relevant summary and test functions for each dataset
+#' @param analysis_conf the general analysis configuration class
+#' @param experiments the name of the experiments to set summary and test functions for
+#' @return a list of functions to use as summary and test functions for each dataset
 get_sum_fs_confidence <- function(analysis_conf, experiments) {
   map_f_to_exp <- function(exp_name) {
     summary_f <- function(mat) {

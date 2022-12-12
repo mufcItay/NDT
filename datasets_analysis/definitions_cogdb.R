@@ -1,3 +1,13 @@
+
+#' preprocess_dfs_cogdb
+#' The function preprocesses a single dataset to fit with the analysis pipeline.
+#' participants with less than two observations in each condition are excluded.
+#' @param df a dataframe with the shape (#Participants X #Trials) X (idv, iv, dv)
+#' @param ds_name the name of the data frame to preprocess
+#' @return a preprocessed dataframe with the shape (#Participants X #Trials) X (idv, iv, iv2, dv),
+#' where idv is the identifier of participants, iv is the experimental condition, iv2 is set to NA
+#' unless the datasets includes an interaction analysis, or if the dependent measure is calculated
+#' from more than one variable,and dv is the dependent measure
 preprocess_dfs_cogdb  <- function(df, ds_name) {
   #exclude subjects from experiments if the have too few trials in each cell
   df <- df %>% 
@@ -15,9 +25,14 @@ preprocess_dfs_cogdb  <- function(df, ds_name) {
   return (df)
 }
 
-# retrieves the database to analyze (including all individual experiments)
+#' get_sum_fs_cogdb
+#' The function sets the relevant summary and test functions for each dataset
+#' @param analysis_conf the general analysis condfiguration class
+#' @param experiments the name of the experiments to set summary and test functions for
+#' @return a list of functions to use as summary and test functions for each dataset
 get_sum_fs_cogdb <- function(analysis_conf, experiments) {
   map_f_to_exp <- function(exp_name) {
+    # special case of an interaction effect
     if(startsWith(exp_name,'jasifi')) {
       sum_f <- ifelse(endsWith(exp_name,'rt'), stats::median, base::mean)
       jasifi_args <- list(idv = 'idv', iv = 'iv', iv2 = 'iv2', dv = 'dv', summary_f = sum_f)

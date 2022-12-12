@@ -1,4 +1,12 @@
 
+#' get_participant_SDT_d
+#' The function calculates a d' score for a given participant.
+#' It uses an adjustments to the hit and false alarm rate (if the calculated rate
+#' is 1, the function sets it to 1-1/2N, and if it is 0 it sets the rate to 1/2N; where N
+#' denotes the number of total trials)  
+#' @param mat a matrix of the condition labels (iv) and responses (dv) for each trial (rows).
+#' @param args a list of parameter values for the indepdent measure (iv)
+#' @return the difference between Z(hit_rate) and Z(fa_rate)
 get_participant_SDT_d <- function(mat, args = list(iv = 'iv', dv = 'dv')) {
   mat <- as.data.frame(mat)
   conds <- sort(unique(mat[,args$iv]))
@@ -14,6 +22,16 @@ get_participant_SDT_d <- function(mat, args = list(iv = 'iv', dv = 'dv')) {
   return (diff(rate_norms))
 }
 
+#' preprocess_dfs_UC
+#' The function preprocesses a single dataset to fit with the analysis of unconscious processing effects.
+#' participants with insufficient observations in each condition are excluded.
+#' @param df a dataframe with the shape (#Participants X #Trials) X (idv, iv, dv)
+#' @param ds_name the name of the data frame to preprocess
+#' @return a preprocessed dataframe with the shape (#Participants X #Trials) X (idv, iv, iv2, dv),
+#' where idv is the identifier of participants, iv is the experimental condition, 
+#' iv2 is set to NA unless the datasets includes an interaction analysis, 
+#' or if the dependent measure is calculated from more than one variable,
+#' and dv is reaction time in each trials
 preprocess_dfs_UC <- function(df, ds_name) {
   # special treatment of the multisensory experiment (they used log(rt))
   if(startsWith(ds_name, 'Faivre')) {
@@ -23,10 +41,10 @@ preprocess_dfs_UC <- function(df, ds_name) {
   df <- df %>% 
     dplyr::select(exp, idv, dv, iv, iv2)
   
-  # remove participants with less than 5 observations in a cell
+  # remove participants with less than 2 observations in a cell
   if(startsWith(ds_name, 'Stein & van Peelen_2020') |
      startsWith(ds_name, 'Skora et al_2020')) {
-    min_trials <- 1
+    min_trials <- 2
     exc <- df %>%
       group_by(exp, idv, iv, iv2,dv) %>%
       summarise(n = n(), .groups = 'drop_last') %>%
@@ -47,7 +65,11 @@ preprocess_dfs_UC <- function(df, ds_name) {
   return(df)
 }
 
-# retrieves the database to analyze (including all individual experiments)
+#' get_sum_fs_UC
+#' The function sets the relevant summary and test functions for each dataset
+#' @param analysis_conf the general analysis condfiguration class
+#' @param experiments the name of the experiments to set summary and test functions for
+#' @return a list of functions to use as summary and test functions for each dataset
 get_sum_fs_UC <- function(analysis_conf, experiments) {
   map_f_to_exp <- function(exp_name) {
     if(startsWith(exp_name,'Skora et al_2020')) {

@@ -6,4 +6,5 @@ source('datasets_analysis\\definitions.R')
 # AUC_analysis_conf
 # confidence_analysis_conf
 # cogdb_analysis_conf
+init_analysis()
 run_analysis(cogdb_analysis_conf)

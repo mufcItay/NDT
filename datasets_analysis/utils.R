@@ -1,9 +1,17 @@
-library(ggplot2)
 library(tidyr)
 source('datasets_analysis\\quid.R')
 source('datasets_analysis\\pbt.R')
 
-# retrieves the database to analyze (including all individual experiments)
+#' get_input_df
+#' The function reads all datasets according to the 'analysis_conf' parameter to generate
+#' an aggregated dataframe for the analysis of all datasets 
+#' @param analysis_conf a configuration class with the functions needed to read and
+#' preporocess the relevant datasets and
+#' @return an aggregated dataframe with all datasets.
+#' The shape of the dataframe is (#Experiments X #Participants X #Trials) X (exp,idv,iv,iv2,dv),
+#' where exp is the identifier of the experiment (and dataset), idv is the identifier 
+#' of each participant, iv is the experimental condition, iv2 is an optional column with
+#' another parameter in the dataset, and dv is the dependent measure
 get_input_df <- function(analysis_conf) {
   # if db file already exists
   if(file.exists(analysis_conf@db_output_fn)) {
@@ -37,7 +45,11 @@ get_input_df <- function(analysis_conf) {
 }
 
 
-# retrieves the database to analyze (including all individual experiments)
+#' run_analysis
+#' The function reads all datasets and analyze them according to the 'analysis_conf' parameter
+#' The output of the function is a csv file describing all of the analysis results
+#' @param analysis_conf a configuration class with the functions needed to read, preporocess,
+#' and analyze the relevant datasets according to all relevant tests
 run_analysis <-function(analysis_conf) {
   set.seed(analysis_conf@seed)
   dfs <- get_input_df(analysis_conf)
@@ -70,6 +82,21 @@ run_analysis <-function(analysis_conf) {
   write.csv(res, analysis_conf@results_fn)  
 }
 
+#' perm_test_subject
+#' The function runs a permutations test per subject using a given summary function, for
+#' the difference between two conditions
+#' @param mat a matrix of the shape (#Trials) X (iv, dv), where 'iv' indicates the experimental
+#' condition of each trial and 'dv' indicates the dependent measure in the same trial.
+#' @param obs the observed difference score between conditions
+#' @param summary_f the summary function to use when summarizing the data in each condition.
+#' The function should be implemented in the form of (mat') -> (result), assuming that mat' is
+#' a subset of the trials in mat, from a specific condition 
+#' @param summary_f_args a list of parameter names in 'mat' to be used within the summary_f
+#' function. The list should include a indepdent variable ('iv') and a depdent measure ('dv)
+#' @param n_perm the number of permutations to use in the permutations test
+#' @param two.sided a boolean parameter determining whether we use a two-sided permutations test.
+#' If the parameter is set to FALSE, a one-sided test would be used
+#' @return the function returns the test's p-value
 perm_test_subject <- function(mat, obs, summary_f, summary_f_args = list(iv = 'iv', dv = 'dv'), 
                               n_perm = 10^4, two.sided = TRUE) {
   if('iv2' %in% summary_f_args) {
@@ -99,6 +126,16 @@ perm_test_subject <- function(mat, obs, summary_f, summary_f_args = list(iv = 'i
   return (p_value)
 }
 
+#' get_diff_effect
+#' The function calculates the difference score between the experimental conditions
+#' @param mat a matrix of the shape (#Trials) X (iv, dv), where 'iv' indicates the experimental
+#' condition of each trial and 'dv' indicates the dependent measure in the same trial.
+#' @param summary_f_args a list, including (1) a summary function 'summary_f' which is 
+#' the summary function to use when summarizing the data in each condition.
+#' The function should be implemented in the form of (mat') -> (result), assuming that mat' is
+#' a subset of the trials in mat, from a specific condition of parameter names in 'mat' to be used within the summary_f
+#' function (2) parameter names including ('iv') and a depdent measure ('dv)
+#' @return the difference score between the experimental conditions
 get_diff_effect <- function(mat, args = list(summary_f = mean, iv = 'iv', dv = 'dv')) {
   return (as.data.frame(mat) %>% 
             group_by(!!dplyr::sym(args$iv)) %>% 
@@ -106,5 +143,4 @@ get_diff_effect <- function(mat, args = list(summary_f = mean, iv = 'iv', dv = '
             summarise(effect = diff(val)) %>% 
             pull(effect))
 }  
-
 
