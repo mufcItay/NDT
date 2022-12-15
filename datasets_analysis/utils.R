@@ -1,4 +1,5 @@
 library(tidyr)
+source('datasets_analysis\\definitions.R')
 source('datasets_analysis\\quid.R')
 source('datasets_analysis\\pbt.R')
 
@@ -41,6 +42,7 @@ get_input_df <- function(analysis_conf) {
     return (df)
   })
   df_all <- do.call(rbind, dfs)
+  
   return(df_all)
 }
 
@@ -55,7 +57,6 @@ run_analysis <-function(analysis_conf) {
   dfs <- get_input_df(analysis_conf)
   analysis_fs <- analysis_conf@sum_fs(analysis_conf, unique(dfs$exp))
   # get a dataframe of the results 
-  # (for the RT analysis we use Median as summary_function, and for the AUC analysis we use get_AUC)
   res <- dfs %>%
     group_by(exp) %>%
     group_modify(~data.frame(
@@ -64,9 +65,10 @@ run_analysis <-function(analysis_conf) {
                                    summary_function = analysis_fs[[.y[[1]]]]$summary)[c('statistic','p')],
                              directional_effect = test_directional_effect(.x,'idv', c('dv','iv2'), 'iv',
                                     null_dist_samples = analysis_conf@n_samp,
-                                    summary_function = analysis_fs[[.y[[1]]]]$summary)[c('statistic','p')],
-                             quid = run_quid(.x)[c('pos_bf')],
-      pbt = run_pbt(.x, analysis_fs[[.y[[1]]]]$test)[c('low','high')]))
+                                    summary_function = analysis_fs[[.y[[1]]]]$summary)[c('statistic','p')]
+      #                        quid = run_quid(.x)[c('pos_bf')],
+      # pbt = run_pbt(.x, analysis_fs[[.y[[1]]]]$test)[c('low','high')]
+      ))
   
   # adjust p-values of the directional test
   if('directional_effect.p' %in% names(res)){
@@ -102,7 +104,6 @@ perm_test_subject <- function(mat, obs, summary_f, summary_f_args = list(iv = 'i
   if('iv2' %in% summary_f_args) {
     resamp_f_args <- summary_f_args
     resamp_f_args$iv = resamp_f_args$iv2
-    
     n_trials <- nrow(mat)
     conds <- unique(mat$iv)
     inner_perm <- function(iteration, mat, summary_f, summary_f_args) {

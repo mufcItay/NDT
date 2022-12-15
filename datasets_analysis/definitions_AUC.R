@@ -8,18 +8,19 @@ source('datasets_analysis\\definitions.R')
 #' NA is returned if the matrix misses one category of accuracy scores or if the matrix dimensions
 #' are not as expected
 #' @return the calculated AUC measure
-get_AUC <- function(mat){
-  if(length(dimnames(mat) [[2]]) <2) {
-    # not enough trials overall
-    return(NA)
-  }
-  
-  accuracy <- mat[,'iv2']
+get_AUC <- function(mat, summary_f_args = list(iv = 'iv2', dv = 'dv')){
+  mat <- as.data.frame(mat)
+  # if(length(colnames(mat)) <2) {
+  #   # not enough trials overall
+  #   return(NA)
+  # }
+  # 
+  accuracy <- mat[,summary_f_args$iv]
   if(length(unique(accuracy)) < 2) {
     # not enough accuracy levels
     return(NA)
   }
-  confidence <- mat[,'dv']
+  confidence <- mat[,summary_f_args$dv]
   accuracy <- accuracy[order(confidence, decreasing=TRUE)]
   AUC <- trapz(cumsum(!accuracy)/sum(!accuracy),
                cumsum(accuracy)/sum(accuracy))
@@ -68,7 +69,13 @@ get_sum_fs_AUC <- function(analysis_conf, experiments) {
       return (analysis_conf@summary_f(mat))
     }
     test_f <- function(mat) {
-      return(INVALID_VALUE_CODE)
+      conds <- sort(unique(mat$iv))
+      mat_cond_1 <- mat[mat$iv == conds[1],c('iv2','dv')]
+      mat_cond_2 <- mat[mat$iv == conds[2],c('iv2','dv')]
+      obs <- analysis_conf@summary_f(mat_cond_1) -
+        analysis_conf@summary_f(mat_cond_2)
+      return(perm_test_subject(as.data.frame(mat), obs, summary_f = analysis_conf@summary_f,
+                               summary_f_args = list(iv = 'iv', iv2 = 'iv2', dv = 'dv')))
     }
     return(list(summary = summary_f, test = test_f))
   }

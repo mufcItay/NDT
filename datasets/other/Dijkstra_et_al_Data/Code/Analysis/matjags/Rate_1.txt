@@ -1,7 +1,0 @@
-model {
-   # Prior on Rate
-   theta ~ dbeta(1,1)
-
-   # Observed Counts
-   k ~ dbin(theta,n)
-}

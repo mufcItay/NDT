@@ -46,41 +46,56 @@ setMethod("initialize", analysisConfCName,
           })
 
 
-init_analysis <- function() {
+confidence_analysis_lbl <- 'cdb'
+AUC_analysis_lbl <- 'auc'
+UCDB_analysis_lbl <- 'ucdb'
+cogdb_analysis_lbl <- 'cogdb'
+
+init_analysis <- function(type) {
   # get directiory path
   dir_path <- 'datasets_analysis'
   defs_prefix <- 'definitions'
 
   ## Confidence analysis
-  source(paste(dir_path, paste0(defs_prefix, '_confidence.R'), 
-               sep = .Platform$file.sep))
-  # create an instance of the analysis configuration for the confidence DB
-  confidence_analysis_conf <- new(analysisConfCName, 'datasets\\cdb\\Usable\\', 
-                                  'results\\Confidence_DB.csv', 'results\\Confidence_Results.csv',
-                                  preprocess_dfs_cdb, base::mean,
-                                  sum_fs = get_sum_fs_confidence)
+  if(type == confidence_analysis_lbl) {
+    source(paste(dir_path, paste0(defs_prefix, '_confidence.R'), 
+                 sep = .Platform$file.sep))
+    # create an instance of the analysis configuration for the confidence DB
+    conf <- new(analysisConfCName, 'datasets\\cdb\\Usable\\', 
+                                    'results\\Confidence_DB.csv', 'results\\Confidence_Results.csv',
+                                    preprocess_dfs_cdb, base::mean,
+                                    sum_fs = get_sum_fs_confidence)
+  }
   
   
   ## AUC analysis
-  source(paste(dir_path, paste0(defs_prefix, '_AUC.R'), 
-               sep = .Platform$file.sep))
-  AUC_analysis_conf <- new(analysisConfCName, 'datasets\\cdb\\Usable\\',
-                           'results\\AUC_DB.csv', 'results\\AUC_Results.csv',
-                           preprocess_dfs_AUC, get_AUC, 
-                           sum_fs = get_sum_fs_AUC)
+  if(type == AUC_analysis_lbl) {
+    source(paste(dir_path, paste0(defs_prefix, '_AUC.R'), 
+                 sep = .Platform$file.sep))
+    conf <- new(analysisConfCName, 'datasets\\cdb\\Usable\\',
+                             'results\\AUC_DB.csv', 'results\\AUC_Results.csv',
+                             preprocess_dfs_AUC, get_AUC, 
+                             sum_fs = get_sum_fs_AUC)
+  }
+
   ## UC analysis
-  source(paste(dir_path, paste0(defs_prefix, '_UCDB.R'), 
-               sep = .Platform$file.sep))
-  UCID_analysis_conf <- new(analysisConfCName, 'datasets\\ucdb\\',
-                            'results\\UC_DB.csv', 'results\\UCDB_Results.csv', 
-                            preprocess_dfs_UC, stats::median,
-                            sum_fs = get_sum_fs_UC)
+  if(type == UCDB_analysis_lbl) {
+      source(paste(dir_path, paste0(defs_prefix, '_UCDB.R'), 
+                 sep = .Platform$file.sep))
+    conf <- new(analysisConfCName, 'datasets\\ucdb\\',
+                              'results\\UC_DB.csv', 'results\\UCDB_Results.csv', 
+                              preprocess_dfs_UC, stats::median,
+                              sum_fs = get_sum_fs_UC)
+  }
   
   ## cogdb analysis
-  source(paste(dir_path, paste0(defs_prefix, '_cogdb.R'), 
-               sep = .Platform$file.sep))
-  cogdb_analysis_conf <- new(analysisConfCName, 'datasets\\cogdb\\',
-                             'results\\UC_DB.csv', 'results\\cogdb_Results.csv', 
-                             preprocess_dfs_cogdb, stats::median,
-                             sum_fs = get_sum_fs_cogdb)
+  if(type == cogdb_analysis_lbl) {
+      source(paste(dir_path, paste0(defs_prefix, '_cogdb.R'), 
+                 sep = .Platform$file.sep))
+    conf <- new(analysisConfCName, 'datasets\\cogdb\\',
+                               'results\\UC_DB.csv', 'results\\cogdb_Results.csv', 
+                               preprocess_dfs_cogdb, stats::median,
+                               sum_fs = get_sum_fs_cogdb)
+  }
+  return(conf)
 }
