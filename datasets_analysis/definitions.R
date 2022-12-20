@@ -61,7 +61,7 @@ init_analysis <- function(type) {
     source(paste(dir_path, paste0(defs_prefix, '_confidence.R'), 
                  sep = .Platform$file.sep))
     # create an instance of the analysis configuration for the confidence DB
-    conf <- new(analysisConfCName, 'datasets\\cdb\\Usable\\', 
+    conf <- new(analysisConfCName, 'datasets\\cdb\\CONFDB\\', 
                                     'results\\Confidence_DB.csv', 'results\\Confidence_Results.csv',
                                     preprocess_dfs_cdb, base::mean,
                                     sum_fs = get_sum_fs_confidence)
@@ -72,7 +72,7 @@ init_analysis <- function(type) {
   if(type == AUC_analysis_lbl) {
     source(paste(dir_path, paste0(defs_prefix, '_AUC.R'), 
                  sep = .Platform$file.sep))
-    conf <- new(analysisConfCName, 'datasets\\cdb\\Usable\\',
+    conf <- new(analysisConfCName, 'datasets\\cdb\\AUCDB\\',
                              'results\\AUC_DB.csv', 'results\\AUC_Results.csv',
                              preprocess_dfs_AUC, get_AUC, 
                              sum_fs = get_sum_fs_AUC)

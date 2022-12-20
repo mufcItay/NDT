@@ -6,4 +6,5 @@ source('datasets_analysis\\definitions.R')
 # AUC_analysis_conf
 # confidence_analysis_conf
 # cogdb_analysis_conf
-run_analysis(cogdb_analysis_conf)
+conf <- init_analysis(confidence_analysis_lbl)
+run_analysis(conf)

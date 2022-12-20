@@ -10,11 +10,13 @@ source('datasets_analysis\\definitions.R')
 #' @return the calculated AUC measure
 get_AUC <- function(mat, summary_f_args = list(iv = 'iv2', dv = 'dv')){
   mat <- as.data.frame(mat)
-  # if(length(colnames(mat)) <2) {
-  #   # not enough trials overall
-  #   return(NA)
-  # }
-  # 
+  if(length(colnames(mat)) <2) {
+    # not enough trials overall
+    browser()
+    print(mat)
+    return(NA)
+  }
+
   accuracy <- mat[,summary_f_args$iv]
   if(length(unique(accuracy)) < 2) {
     # not enough accuracy levels

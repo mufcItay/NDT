@@ -65,9 +65,9 @@ run_analysis <-function(analysis_conf) {
                                    summary_function = analysis_fs[[.y[[1]]]]$summary)[c('statistic','p')],
                              directional_effect = test_directional_effect(.x,'idv', c('dv','iv2'), 'iv',
                                     null_dist_samples = analysis_conf@n_samp,
-                                    summary_function = analysis_fs[[.y[[1]]]]$summary)[c('statistic','p')]
-      #                        quid = run_quid(.x)[c('pos_bf')],
-      # pbt = run_pbt(.x, analysis_fs[[.y[[1]]]]$test)[c('low','high')]
+                                    summary_function = analysis_fs[[.y[[1]]]]$summary)[c('statistic','p')],
+                             quid = run_quid(.x)[c('quid_bf')],
+      pbt = run_pbt(.x, analysis_fs[[.y[[1]]]]$test)[c('low','high')]
       ))
   
   # adjust p-values of the directional test
