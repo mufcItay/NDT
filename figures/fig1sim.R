@@ -69,7 +69,7 @@ create_sample_data <- function(p_mean, p_sd, seed = 1, N = 30, trials_per_cnd = 
 ##'
 prepare_data <- function(data, ci_percentile = 5) {
   # transform the dependent variable to RT
-  data$var <- data$var * 10  + 650
+  data$var <- data$var * 20  + 650
   # get directional effect
   res_dir <- data %>% get_directional_effect(idv = 'id', dv = 'var', iv = 'condition', summary_function = stats::median)
   ord_effects <- order(res_dir$effect_per_id$score)
@@ -119,6 +119,7 @@ generate_effects_plot <- function(data, graphics_conf) {
   plt <- ggplot(data, aes(x = effect, y = id)) +
     xlab('Effect') +
     ylab('Subject') +
+    xlim(-50,50) +
     geom_point(size = 3) +
     geom_hline(yintercept = data$id + graphics_conf$margin_y_subj, 
                size = graphics_conf$size_seg/2, linetype='dotted', 
@@ -168,6 +169,7 @@ generate_ps_plot <- function(data_ps_cong, data_ps_incong, graphics_conf) {
     geom_vline(xintercept = mean(data_ps_cong$med),  size = graphics_conf$vline_size) +
     xlab('RT') +
     ylab('Subject') +
+    xlim(300, 1000) +
     theme_classic() +
     theme(legend.position = 'none',
           axis.text = element_text(size = graphics_conf$x_text_size),
@@ -193,7 +195,7 @@ generate_ps_plot <- function(data_ps_cong, data_ps_incong, graphics_conf) {
 #' left side of the aggregated plot has width of 1)
 #'
 #' @return returns a figure of the directional effects and within participant percentiles
-generate_agg_plot <- function(data, graphics_conf, rng_ratio = -1) {
+generate_agg_plot <- function(data, graphics_conf, fn, rng_ratio = -1) {
   res <- prepare_data(data)
   data_effects <- res$effects
   data_ps_incong <- res$ps_incong
@@ -207,8 +209,10 @@ generate_agg_plot <- function(data, graphics_conf, rng_ratio = -1) {
     rng_right <- max(data_ps_incong$high) - min(data_ps_incong$low) 
     rng_ratio <- rng_right / rng_left
   }
-  grid.arrange(p_left ,p_right, widths = c(1, rng_ratio), ncol = 2,
+  plt <- grid.arrange(p_left ,p_right, widths = c(1, rng_ratio), ncol = 2,
                left = textGrob("Subject", rot = 90, vjust = 1, gp = gpar(fontsize = graphics_conf$x_title_size)))
+  ggsave(paste('figures',paste0(fn, '.svg'), sep = .Platform$file.sep), 
+         width=10, height=5,plot = plt)
   
   return(rng_ratio)
 }
@@ -219,7 +223,46 @@ graphics_conf <- list(size_seg = 2, color_spreading_lines = '#71E9CC',
                       incong_color = 'black', cong_color = 'red', med_color = 'gray',
                       vline_size = 1, x_title_size = 22, x_text_size = 20)
 # generate weaknull plot
-wn_data <- create_sample_data(p_mean = 0, p_sd = 2, N = 15, trials_per_cnd = 500, wSEsd = 1)
-ratio <- generate_agg_plot(wn_data, graphics_conf)
-sn_data <- create_sample_data(p_mean = 0, p_sd = 0, N = 15, trials_per_cnd = 100, wSEsd = 10)
-generate_agg_plot(sn_data, graphics_conf, ratio)
+wn_data <- create_sample_data(p_mean = 0, p_sd = 1, N = 15, trials_per_cnd = 100, wSEsd = 2)
+ratio <- generate_agg_plot(wn_data, graphics_conf, 'wn_plt')
+sn_data <- create_sample_data(p_mean = 0, p_sd = 0, N = 15, trials_per_cnd = 100, wSEsd = 6)
+generate_agg_plot(sn_data, graphics_conf, 'sn_plt', ratio)
+
+# common analysis, two-sided t-test
+wn_t_test <- wn_data %>%
+  group_by(id, condition) %>%
+  summarise(mrt = mean(var)) %>%
+  group_by(id) %>%
+  summarise(effect = diff(mrt)) %>%
+  pull(effect) %>%
+  t.test()
+sn_t_test <- sn_data %>%
+  group_by(id, condition) %>%
+  summarise(mrt = mean(var)) %>%
+  group_by(id) %>%
+  summarise(effect = diff(mrt)) %>%
+  pull(effect) %>%
+  t.test()
+
+# Bayesian analysis
+# QUID
+source('datasets_analysis\\quid.R')
+renamed_wn_data <- wn_data %>%
+  rename(idv = id, iv = condition, dv = var)
+renamed_sn_data <- sn_data %>%
+  rename(idv = id, iv = condition, dv = var)
+wn_quid_res <- run_quid(renamed_wn_data)
+sn_quid_res <- run_quid(renamed_sn_data)
+wn_bf <- 1/ wn_quid_res$quid_bf
+sn_bf <- 1/ sn_quid_res$quid_bf
+
+#PBT
+source('datasets_analysis\\pbt.R')
+t_f <- function(data) {
+  conditions <- unique(data$iv)
+  t_res <- t.test(data[data$iv == conditions[2],]$dv,
+                  data[data$iv == conditions[1],]$dv)
+  return(t_res$p.value)
+}
+wn_pbt_res <- run_pbt(renamed_wn_data, test_function = t_f)
+sn_pbt_res <- run_pbt(renamed_sn_data, test_function = t_f)

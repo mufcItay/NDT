@@ -67,7 +67,7 @@ run_analysis <-function(analysis_conf) {
                                     null_dist_samples = analysis_conf@n_samp,
                                     summary_function = analysis_fs[[.y[[1]]]]$summary)[c('statistic','p')],
                              quid = run_quid(.x)[c('quid_bf')],
-      pbt = run_pbt(.x, analysis_fs[[.y[[1]]]]$test)[c('low','high')]
+      pbt = run_pbt(.x, analysis_fs[[.y[[1]]]]$test)[c('low','high','MAP')]
       ))
   
   # adjust p-values of the directional test

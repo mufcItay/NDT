@@ -56,7 +56,7 @@ generate_NDT_plot <- function(data, graphics_conf, alpha = .05, eps = 1/10^5) {
 #' @return the plot describing the results of the QUID test
 generate_quid_plot <- function(data, graphics_conf, criteria = 3, eps = 1/10^5) {
   data <- data %>%
-    mutate(effect = quid_bf < 1/criteria, log_bf = log10(quid_bf + eps))
+    mutate(effect = quid_bf > criteria, log_bf = log10(quid_bf + eps))
   plt <- ggplot(data, aes(x = exp, y = log_bf, color = effect)) +
     xlab('Experiment') +
     ylab('log(BF)') +
@@ -121,22 +121,24 @@ results <- read.csv(paste('results', res_summary_fn, sep=.Platform$file.sep))
 
 # get only n.s results in the directional test for effects for which we could use all tests
 results_RT <- results %>%
-  filter(pos_bf != invalid_quid_res, directional_effect.p > alpha) %>%
-  rename(quid_bf = pos_bf)
-
+  filter(quid_bf != invalid_quid_res, directional_effect.p > alpha)
 # generate the PBT sub-plot
-pbt_res <- results_RT %>% select(exp, pbt.high,pbt.low)
+pbt_res <- results_RT %>% dplyr::select(exp, pbt.high,pbt.low)
 plt_pbt <- generate_pbt_plot(pbt_res,graphics_conf)
 plt_pbt
 
 # generate the QUID sub-plot
-quid_res <- results_RT %>% select(exp, quid_bf)
+quid_res <- results_RT %>% 
+  dplyr::select(exp, quid_bf) %>%
+  mutate(quid_bf = 1/quid_bf)
 plt_quid <- generate_quid_plot(quid_res,graphics_conf)
 plt_quid
 
 # generate the NDT sub-plot
 graphics_conf$y_title <- 'Sign-Consistency - log(p)'
-nondir_res <- results %>% select(exp, non_directional.p) %>% rename(p = non_directional.p)
+nondir_res <- results %>% 
+  dplyr::select(exp, non_directional.p) %>% 
+  rename(p = non_directional.p)
 plt_nondir <- generate_NDT_plot(nondir_res,graphics_conf)
 plt_nondir
 

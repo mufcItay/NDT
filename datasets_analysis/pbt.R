@@ -23,8 +23,8 @@ run_pbt <- function(data, test_function, alpha = .05, hdi_width = .95) {
   Nsig = sum(res_dir$p < alpha, na.rm=T)
   prevalence_hdpi = bayesprev_hpdi(hdi_width, Nsig, N)
   prev_above_zero <- 0 < prevalence_hdpi[1]
-  prevalence_est = bayesprev_map(Nsig, N)
-  return (list(low = prevalence_hdpi[1], high = prevalence_hdpi[2]))
+  prevalence_MAP = bayesprev_map(Nsig, N)
+  return (list(low = prevalence_hdpi[1], high = prevalence_hdpi[2], MAP = prevalence_MAP))
 }
 
 #################################################################
