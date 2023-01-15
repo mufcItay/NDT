@@ -33,18 +33,15 @@ get_participant_SDT_d <- function(mat, args = list(iv = 'iv', dv = 'dv')) {
 #' or if the dependent measure is calculated from more than one variable,
 #' and dv is reaction time in each trials
 preprocess_dfs_UC <- function(df, ds_name) {
-  # special treatment of the multisensory experiment (they used log(rt))
-  if(startsWith(ds_name, 'Faivre')) {
-    df <- df %>% mutate(dv = log(dv))
-  }
-  if(! 'iv2' %in% names(df)) { df$iv2 <- rep(NA, nrow(df))} 
+  # if there is no second independent variable, just set -1 to all iv2 values,
+  # the summary functions don't use them anyway so that should work
+  if(! 'iv2' %in% names(df)) { df$iv2 <- rep(INVALID_VALUE_CODE, nrow(df))} 
   df <- df %>% 
     dplyr::select(exp, idv, dv, iv, iv2)
-  
+  min_trials <- 5
   # remove participants with less than 2 observations in a cell
   if(startsWith(ds_name, 'Stein & van Peelen_2020') |
      startsWith(ds_name, 'Skora et al_2020')) {
-    min_trials <- 2
     exc <- df %>%
       group_by(exp, idv, iv, iv2,dv) %>%
       summarise(n = n(), .groups = 'drop_last') %>%
@@ -52,15 +49,14 @@ preprocess_dfs_UC <- function(df, ds_name) {
       pull(idv)
     
   } else {
-    min_trials <- 5
     exc <- df %>%
-      group_by(exp, idv, iv, iv2) %>%
+      mutate(unique_id = paste(exp, idv, sep = '_')) %>%
+      group_by(unique_id, iv, iv2) %>%
       summarise(n = n(), .groups = 'drop_last') %>%
       filter(n < min_trials) %>%
-      pull(idv)
-    
+      pull(unique_id)
   }
-  df <- df %>% filter(! idv %in% exc)
+  df <- df %>% filter(! paste(exp, idv, sep = '_') %in% exc)
   
   return(df)
 }

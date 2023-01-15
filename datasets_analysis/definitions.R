@@ -31,7 +31,7 @@ setMethod("initialize", analysisConfCName,
                    preprocess_f,
                    summary_f,
                    sum_fs,
-                   n_samp = 1000,
+                   n_samp = 10000,
                    seed = 101) {
             .Object@input_source <- input_source
             .Object@db_output_fn <- db_output_fn

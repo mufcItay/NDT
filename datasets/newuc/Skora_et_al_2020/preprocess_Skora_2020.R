@@ -18,7 +18,7 @@ data_exp1 <- data_exp1 %>%
   mutate(iv = ifelse(correct_resp, button_press, !button_press),
          exp = paste(study_name, '1',sep = '_')) %>% 
   rename(idv = subID, dv = button_press) %>%
-  select(idv, iv, exp, dv)
+  dplyr::select(idv, iv, exp, dv)
 
 
 #read exp2 data
@@ -28,7 +28,7 @@ data_exp2 <- data_exp2 %>%
   mutate(go = 1-go, type = type -1) %>%
   rename(idv = pnum, iv = type, dv = go) %>%
   mutate(exp = paste(study_name, '2',sep = '_')) %>% 
-  select(idv, iv, exp, dv)
+  dplyr::select(idv, iv, exp, dv)
 
 data <- rbind(data_exp1, data_exp2)
 write.csv(data, 'Skora et al_2020.csv')
@@ -50,11 +50,11 @@ df_sdt <- data %>%
            fill = list(count = 0))
 
 df_d <- df_sdt %>% group_by(exp, idv, iv) %>% 
-  summarise(rate = (count[1]) / (sum(count))) %>%
-  # summarise(rate = 
-  #             ifelse(count[1] == 0, 1/(2 * sum(count)), 
-  #                    ifelse(count[1] == sum(count), (1 - 1 / (2 * sum(count))), 
-  #                           count[1] / sum(count)))) %>%
+  # summarise(rate = (count[1]) / (sum(count))) %>%
+  summarise(rate =
+              ifelse(count[1] == 0, 1/(2 * sum(count)),
+                     ifelse(count[1] == sum(count), (1 - 1 / (2 * sum(count))),
+                            count[1] / sum(count)))) %>%
   group_by(exp, idv) %>% 
   summarise(d = (qnorm(rate[1]) - qnorm(rate[2])))
 
@@ -63,26 +63,18 @@ length(df_d[df_d$exp == 'Skora et al_2020_1' & !is.nan(df_d$d),]$d)
 mean(df_d[df_d$exp == 'Skora et al_2020_2' & !is.nan(df_d$d),]$d, na.rm = TRUE)
 length(df_d[df_d$exp == 'Skora et al_2020_2' & !is.nan(df_d$d),]$d)
 
-
-get_participant_SDT_d <- function(mat, args = list(iv = 'iv', dv = 'dv')) {
-  mat <- as.data.frame(mat)
-  conds <- sort(unique(mat[,args$iv]))
-  calc_rate_nrom <- function(cnd, mat) {
-    cnd_dat <- mat[mat[,args$iv] == cnd,]
-    cnt <- sum(cnd_dat[,args$dv])
-    len <- length(cnd_dat[,args$dv]) 
-    rate <- ifelse(cnt == 0, 1 / (2*len), 
-                   ifelse(cnt == len, 1- 1 / (2*len), cnt / len))
-    return (qnorm(rate))
-  }
-  rate_norms <- sapply(conds, calc_rate_nrom, mat = mat)
-  return (diff(rate_norms))
+summary_f <- function(mat) {
+  cnt <- sum(mat[,'dv'])
+  len <- length(mat[,'dv']) 
+  rate <- ifelse(cnt == 0, 1 / (2*len), 
+                 ifelse(cnt == len, 1- 1 / (2*len), cnt / len))
+  return (qnorm(rate))
 }
 
-hist(data %>% filter(exp == 'Skora et al_2020_2') %>%
-  group_by(idv) %>%
-  group_modify(~data.frame(d = get_participant_SDT_d(.x))) %>%
-  pull(d))
 
-get_participant_SDT_d(data %>% filter(exp == 'Skora et al_2020_1',
-                                      idv == 100) %>% select (dv, iv))
+get_directional_effect(data %>% mutate(iv2 = 11) %>%filter(exp == 'Skora et al_2020_1'), 
+                       idv = 'idv', iv = 'iv', dv = c('dv','iv2'), 
+                       summary_function =summary_f )
+test_sign_consistency(data %>% mutate(iv2 = 11) %>%filter(exp == 'Skora et al_2020_1'), 
+                       idv = 'idv', iv = 'iv', dv = c('dv','iv2'), 
+                       summary_function =summary_f)

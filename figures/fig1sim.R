@@ -68,8 +68,6 @@ create_sample_data <- function(p_mean, p_sd, seed = 1, N = 30, trials_per_cnd = 
 ##' }
 ##'
 prepare_data <- function(data, ci_percentile = 5) {
-  # transform the dependent variable to RT
-  data$var <- data$var * 20  + 650
   # get directional effect
   res_dir <- data %>% get_directional_effect(idv = 'id', dv = 'var', iv = 'condition', summary_function = stats::median)
   ord_effects <- order(res_dir$effect_per_id$score)
@@ -211,7 +209,7 @@ generate_agg_plot <- function(data, graphics_conf, fn, rng_ratio = -1) {
   }
   plt <- grid.arrange(p_left ,p_right, widths = c(1, rng_ratio), ncol = 2,
                left = textGrob("Subject", rot = 90, vjust = 1, gp = gpar(fontsize = graphics_conf$x_title_size)))
-  ggsave(paste('figures',paste0(fn, '.svg'), sep = .Platform$file.sep), 
+  ggsave(paste('figures',paste0(fn, '.png'), sep = .Platform$file.sep), 
          width=10, height=5,plot = plt)
   
   return(rng_ratio)
@@ -222,10 +220,13 @@ graphics_conf <- list(size_seg = 2, color_spreading_lines = '#71E9CC',
                       margin_y_subj = 0.5, margin_y_conds = 0.125, legnth_med = 2,
                       incong_color = 'black', cong_color = 'red', med_color = 'gray',
                       vline_size = 1, x_title_size = 22, x_text_size = 20)
+offset_rt <- 650
 # generate weaknull plot
-wn_data <- create_sample_data(p_mean = 0, p_sd = 1, N = 15, trials_per_cnd = 100, wSEsd = 2)
+wn_data <- create_sample_data(p_mean = 0, p_sd = 15, N = 15, trials_per_cnd = 100, wSEsd = 30)
+wn_data$var <- wn_data$var + offset_rt
 ratio <- generate_agg_plot(wn_data, graphics_conf, 'wn_plt')
-sn_data <- create_sample_data(p_mean = 0, p_sd = 0, N = 15, trials_per_cnd = 100, wSEsd = 6)
+sn_data <- create_sample_data(p_mean = 0, p_sd = 0, N = 15, trials_per_cnd = 100, wSEsd = 100)
+sn_data$var <- sn_data$var + offset_rt
 generate_agg_plot(sn_data, graphics_conf, 'sn_plt', ratio)
 
 # common analysis, two-sided t-test
@@ -266,3 +267,29 @@ t_f <- function(data) {
 }
 wn_pbt_res <- run_pbt(renamed_wn_data, test_function = t_f)
 sn_pbt_res <- run_pbt(renamed_sn_data, test_function = t_f)
+
+
+## plot Kruschke style plots for the figure
+source('figures\\util_plot_dist.R')
+nde_b <- dists$normal
+nde_w <- dists$normal
+nde_w$ddist_params$sd = nde_w$ddist_params$sd / 2 
+save_png <- function(fn, dist, labels) {
+  fn <- paste('figures', paste0(fn, '.png'), sep = .Platform$file.sep)
+  png(fn, width=165, height=123, bg="transparent", res=72, )
+  plot_dist(dist, labels = labels, plot_dist_name = F)
+  dev.off()
+}
+
+# upper panel - nde
+save_png('nde_b', nde_b, c(mean = expression(N (0, sigma[b]))))
+save_png('nde_w', nde_w, c(mean = expression(N (0, sigma[w]))))
+
+sn_b <- dists$normal
+sn_b$ddist_params$sd = 0.0000001 
+sn_b$plot_type <- 'line'
+sn_w <- dists$normal
+sn_w$ddist_params$sd = sn_w$ddist_params$sd * 2 
+# Lower panel - sn
+save_png('sn_b', sn_b, c(mean = expression(delta(0))))
+save_png('sn_w', sn_w, c(mean = expression(N (0, sigma[w]))))

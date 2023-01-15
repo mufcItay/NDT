@@ -66,7 +66,7 @@ study_name <- 'Benthien & Hesselmann_2021'
 data <- data_main %>% 
   filter(visibility==0) %>%
   rename(idv = subj, iv = congruency, iv2 = certainty, dv = RT) %>%
-  mutate(exp = study_name) %>% 
+  mutate(exp = study_name, dv = dv * 1000) %>% 
   select(idv, iv, iv2, exp, dv)
 
 

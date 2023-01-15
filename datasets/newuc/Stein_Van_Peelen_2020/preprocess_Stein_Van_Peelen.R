@@ -25,6 +25,7 @@ uc_pres_times_exp3 <- c(1,2) # 8, 8(8)
 data_exp3_loc <- data_exp3 %>% 
   filter(pres_time %in% uc_pres_times_exp3, target_present == 1) %>%
   mutate(target_loc = 2 - target_loc) %>% # encoding target location as 1 / 0
+  mutate(upright = 2 - upright) %>% # reencoding upright as 1 (upright) / 0 (inverted)
   mutate(response = ifelse(loc_accu, target_loc, 1-target_loc)) %>% # encode response according to accuracy
   rename(idv = subj, iv = upright, iv2 = target_loc, dv = response) %>%
   mutate(exp = paste(study_name, exp_num, 'LOC', pres_time ,sep = '_')) %>% 
@@ -33,7 +34,8 @@ data_exp3_loc <- data_exp3 %>%
 data_exp3_pas <- data_exp3 %>% 
   filter(pres_time %in% uc_pres_times_exp3) %>%
   mutate(target_present = 2 - target_present) %>% # encoding target present /absent as 1 / 0
-  mutate(response = ifelse(pas > 1, 0, 1)) %>% # encode pas as 1 / > 1 
+  mutate(upright = 2 - upright) %>% # reencoding upright as 1 (upright) / 0 (inverted)
+  mutate(response = ifelse(pas > 1, 1, 0)) %>% # encode pas as 1 / > 1 
   rename(idv = subj, iv = upright, iv2 = target_present, dv = response) %>%
   mutate(exp = paste(study_name, exp_num, 'PAS', pres_time ,sep = '_')) %>% 
   dplyr::select(idv, iv, iv2, exp, dv)
@@ -44,6 +46,7 @@ exp_num <- '4b'
 data_exp4b <- data_exp4b %>% 
   filter(pres_time %in% uc_pres_times_exp4b) %>%
   mutate(target_loc = target_loc - 1) %>% # encoding target location as 1 / 0
+  mutate(valid = 2 - valid) %>% # reencoding valid as 1 (valid) / 0 (invalid)
   mutate(response = ifelse(loc_accu, target_loc, 1-target_loc)) %>%
   rename(idv = subj, iv = valid, iv2 = target_loc, dv = response) %>%
   mutate(exp = paste(study_name, exp_num, pres_time ,sep = '_')) %>% 
@@ -78,9 +81,20 @@ df_d <- df_sdt %>% group_by(exp, idv, iv, iv2) %>%
   group_by(exp, iv) %>% 
   summarise(md = mean(d, na.rm = TRUE))
 
+org_wd <- getwd()
+setwd('..//..//..//')
+source('datasets_analysis//utils.R')
+setwd(org_wd)
+exp1_v1 <- data %>% filter(exp == 'Stein & van Peelen_2020_3_LOC_1',iv ==1)
+exp1_v2 <- data %>% filter(exp == 'Stein & van Peelen_2020_3_LOC_1',iv ==0)
+v1 <- exp1_v1 %>%
+  group_by(idv)%>%
+  group_modify(~data.frame(d=get_participant_SDT_d(.x,args = list(iv = 'iv2', dv = 'dv'))/2^.5))
+v2 <- exp1_v2 %>%
+  group_by(idv)%>%
+  group_modify(~data.frame(d=get_participant_SDT_d(.x,args = list(iv = 'iv2', dv = 'dv'))/2^.5))
 
-
-get_participant_SDT_d <- function(mat, args = list(iv = 'iv', dv = 'dv')) {
+dfunc <- function(mat, args = list(iv = 'iv', dv = 'dv')) {
   mat <- as.data.frame(mat)
   conds <- sort(unique(mat[,args$iv]))
   calc_rate_nrom <- function(cnd, mat) {
@@ -94,7 +108,96 @@ get_participant_SDT_d <- function(mat, args = list(iv = 'iv', dv = 'dv')) {
   rate_norms <- sapply(conds, calc_rate_nrom, mat = mat)
   return (diff(rate_norms))
 }
-
-get_participant_SDT_d(data %>% filter(exp == 'Stein & van Peelen_2020_3_LOC_2',
-                                      idv == 1, iv == 1) %>% select (dv, iv2),
-                      args = list(iv = 'iv2', dv = 'dv')) / 2^.5
+dfunc(exp1_v1%>%filter(idv == 1), args = list(iv = 'iv2', dv = 'dv')) / 2^.5
+# 
+# ## pas validation
+# n_trials <- df_sdt %>% 
+#   filter(grepl('PAS', exp, fixed = TRUE), iv2 == 0) %>%
+#   group_by(exp, idv) %>%
+#   summarise(n = sum(count))
+# fa_rates <- df_sdt %>% 
+#   filter(grepl('PAS', exp, fixed = TRUE), iv2 == 0, dv == 1) %>%
+#   group_by(exp, idv) %>% 
+#   summarise(count = sum(count)) %>%
+#   left_join(y=n_trials, by=c("exp","idv")) %>%
+#   summarise(rate = ifelse(count == 0, 1/(2 * n), 
+#                           ifelse(count == n, (1 - 1 / (2 * n)), 
+#                                  count / n))) %>% 
+#   slice(rep(1:n(), each = 2))
+# 
+# 
+# hit_rates <- df_sdt %>% 
+#   filter(grepl('PAS', exp, fixed = TRUE), iv2 == 1 , dv == 1) %>%
+#   group_by(exp, idv, iv) %>% 
+#   left_join(y=n_trials, by=c("exp","idv")) %>%
+#   summarise(rate = ifelse(count == 0, 1/(2 * n), 
+#                           ifelse(count == n, (1 - 1 / (2 * n)), 
+#                                  count / n)))
+# df_d_pas <- hit_rates
+# df_d_pas$d <- qnorm(df_d_pas$rate) - qnorm(fa_rates$rate) 
+# df_d_pas %>%
+#   group_by(exp, iv) %>% 
+#   summarise(md = mean(d, na.rm = TRUE))
+# 
+# 
+# 
+# #####################
+# calc_detect_d <- function(data) {
+#   browser()
+#   data %>%
+#     group_by(iv2, dv, .drop = FALSE) %>%
+#     summarise(count = n()) %>%
+#     ungroup() %>%
+#     complete(iv2, dv, fill = list(count = 0)) %>%
+#     group_by(iv2, dv, .drop = FALSE) %>%
+#     summarise(count = sum(count)) %>%
+#     summarise(total = sum(count), n = count[2]) %>%
+#     summarise(ninv_rate = qnorm(ifelse(n == 0, 1/(ifelse(iv2 ==0, 2,1) * total), 
+#                                        ifelse(n == total, (1 - 1 / (ifelse(iv2 ==0, 2,1) * total)), 
+#                                               n / total))))
+# }
+# 
+# get_sub_data <- function(dat) {
+#   return(df_sdt %>% filter(exp == dat$exp, iv == dat$idv, idv == dat$idv))
+# }
+# a <- sapply(1:nrow(df_d_pas), function(i) calc_detect_d(get_sub_data(df_d_pas[i,])))
+# df_one <- df_sdt%>% filter(exp == 'Stein & van Peelen_2020_3_PAS_1', idv == 1)
+# rates <- df_one %>%
+#   group_by(iv2, dv, .drop = FALSE) %>%
+#   summarise(count = sum(count)) %>%
+#   summarise(total = sum(count), n = count[2]) %>%
+#   summarise(ninv_rate = qnorm(ifelse(n == 0, 1/(2 * total), 
+#                           ifelse(n == total, (1 - 1 / (2 * total)), 
+#                                  n / total)))) %>%
+#   summarise(d = diff(ninv_rate)) %>% 
+#   pull(d)
+# 
+# 
+# #########################
+# rate_h_fa <- data %>%
+#   filter(grepl('PAS', exp, fixed = TRUE)) %>%
+#   na_if("") %>%
+#   na.omit %>%
+#   group_by(exp, iv, idv, iv2, dv, .drop = FALSE) %>%
+#   summarise(count = n()) %>%
+#   ungroup() %>%
+#   complete(exp, idv, iv, iv2, dv,
+#            fill = list(count = 0)) %>%
+#   group_by(exp, idv, iv, iv2, dv, .drop = FALSE) %>%
+#   summarise(count = sum(count)) %>%
+#   summarise(total = sum(count), n = count[2])
+# rate_h <- rate_h_fa %>%
+#   filter(iv2 == 1) %>%
+#   summarise(n = sum(n), total = sum(total))
+# rate_fa <- rate_h_fa %>%
+#   filter(iv2 == 0) %>%
+#   group_by(exp,idv) %>%
+#   summarise(n = sum(n), total = sum(total)) %>%
+#   slice(rep(1:n(), each = 2))
+# 
+# %>%
+#   summarise(ninv_rate = qnorm(ifelse(n == 0, 1/(ifelse(iv2 == 0, 2,1) * total), 
+#                                      ifelse(n == total, (1 - 1 / (ifelse(iv2 == 0, 2,1) * total)), 
+#                                             n / total)))) %>% 
+#   summarise(d = diff(ninv_rate))
+# 

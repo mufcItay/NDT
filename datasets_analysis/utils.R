@@ -53,22 +53,25 @@ get_input_df <- function(analysis_conf) {
 #' @param analysis_conf a configuration class with the functions needed to read, preporocess,
 #' and analyze the relevant datasets according to all relevant tests
 run_analysis <-function(analysis_conf) {
-  set.seed(analysis_conf@seed)
   dfs <- get_input_df(analysis_conf)
   analysis_fs <- analysis_conf@sum_fs(analysis_conf, unique(dfs$exp))
-  # get a dataframe of the results 
+  exp_analysis <- function(data, exp_name) {
+    set.seed(analysis_conf@seed)
+    data.frame(
+      non_directional = test_sign_consistency(data,'idv', c('dv','iv2'), 'iv',
+                                              null_dist_samples = analysis_conf@n_samp,
+                                              ci_reps = 10^5,
+                                              summary_function = analysis_fs[[exp_name]]$summary)[c('statistic','p', 'ci_low', 'ci_high')],
+      directional_effect = test_directional_effect(data,'idv', c('dv','iv2'), 'iv',
+                                                   null_dist_samples = analysis_conf@n_samp, ci_reps = 10^5, 
+                                                   summary_function = analysis_fs[[exp_name]]$summary)[c('statistic','p', 'ci_low', 'ci_high')],
+      quid = run_quid(data)[c('quid_bf')],
+      pbt = run_pbt(data, analysis_fs[[exp_name]]$test)[c('low','high','MAP')]
+    )
+  }
   res <- dfs %>%
     group_by(exp) %>%
-    group_modify(~data.frame(
-      non_directional = test_sign_consistency(.x,'idv', c('dv','iv2'), 'iv',
-                                   null_dist_samples = analysis_conf@n_samp,
-                                   summary_function = analysis_fs[[.y[[1]]]]$summary)[c('statistic','p')],
-                             directional_effect = test_directional_effect(.x,'idv', c('dv','iv2'), 'iv',
-                                    null_dist_samples = analysis_conf@n_samp,
-                                    summary_function = analysis_fs[[.y[[1]]]]$summary)[c('statistic','p')],
-                             quid = run_quid(.x)[c('quid_bf')],
-      pbt = run_pbt(.x, analysis_fs[[.y[[1]]]]$test)[c('low','high','MAP')]
-      ))
+    group_modify(~exp_analysis (.x,.y[[1]]))
   
   # adjust p-values of the directional test
   if('directional_effect.p' %in% names(res)){
