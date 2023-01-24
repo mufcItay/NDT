@@ -17,13 +17,14 @@ preprocess_dfs_cdb <- function(df, ds_name) {
   df <- df %>% 
     rename(idv = Subj_idx, iv = Response, dv = Confidence) %>% 
     dplyr::select(exp, idv, iv, dv) %>%
-    mutate(iv2 = NA)
+    mutate(iv2 = -1)
   #exclude subjects from experiments if the have too few trials in each cell
+  
   exclusions <- df %>% 
     mutate(iv = factor(iv)) %>% 
     group_by(idv, iv) %>% 
     count(idv, name = "n", .drop = F) %>% 
-    filter (n < 2) %>% 
+    filter (n < 5) %>% 
     pull(idv)
   if(length(exclusions)) { df <- df %>% filter(! idv %in% exclusions) }
   

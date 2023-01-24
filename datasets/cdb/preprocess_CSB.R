@@ -8,7 +8,7 @@ osf_dir_name <- 'Confidence Database'
 osf_repo <- 'osf.io/s46pr/' 
 osf_files <- osf_ls_files(osf_retrieve_node(osf_repo), type = 'folder')
 cdb_osf_file <- osf_files[osf_files$name == osf_dir_name,]
-osf_download(cdb_osf_file, path = dir_path)
+osf_download(cdb_osf_file, path = dir_path, conflicts = 'overwrite')
 fileConn<-file(paste(dir_path, osf_dir_name, paste0(Sys.Date(),".txt"), 
                      sep = .Platform$file.sep),)
 writeLines(c('Downloaded the confidence database at the date specified in the file name'), fileConn)
@@ -23,7 +23,7 @@ preprocess_dataset <- function(fn, db_name, expected_cols) {
   if(! all(expected_cols %in% names(df))) {
     return()
   }
-  df <- df[,expected_cols]
+  df <- df[,expected_cols] %>% drop_na()
   write.csv(df, paste(dir_path, db_name, basename(fn), sep = .Platform$file.sep))
 }
 

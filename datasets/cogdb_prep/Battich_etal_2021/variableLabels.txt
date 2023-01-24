@@ -1,0 +1,32 @@
+Labels for the variables for datasets  generated and analysed for Battich, Garzorz, Wahn, & Deroy "The impact of joint attention on the sound-induced flash illusions" study
+
+Data file: jaSifiData.csv
+
+subject: Subject identifier
+
+pair: Pair of subjects identifier
+
+soc_condition: Social condition. I = Individual, JA = Joint Attention, C = Co-presence Control
+
+stim: Multisensory stimulus presented. #F#B indicates # flashes and # beeps.
+
+trial_n: Trial number within a social condition block
+
+target: Number of flashes presented
+
+beeps: Number of beeps presented
+
+response: Number of flashes reported
+
+rt: Reaction time
+
+correct: Coded as 0 for incorrect response, and 1 for correct response
+
+order: Order of the social condition block, B1, B2, or B3
+
+pos: Sitting position of the participant, L = left, R = right
+
+h1, h2, h3, h4: Shortened Edinburgh Handedness Inventory items. Coded as 1 = Always left, 2 = Usually left, 3 = Both equally, 4 = Usually right, 5 = Always right. (Veale, J. F. (2014). Edinburgh Handedness Inventory – Short Form: A revised version based on confirmatory factor analysis, *Laterality*. 19(2), pp. 164–177. doi: 10.1080/1357650X.2013.783045.)
+
+age: Age in years
+

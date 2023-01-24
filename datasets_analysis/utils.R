@@ -6,7 +6,7 @@ source('datasets_analysis\\pbt.R')
 #' get_input_df
 #' The function reads all datasets according to the 'analysis_conf' parameter to generate
 #' an aggregated dataframe for the analysis of all datasets 
-#' @param analysis_conf a configuration class with the functions needed to read and
+#' @param analysis_conf a configuration object with the functions needed to read and
 #' preporocess the relevant datasets and
 #' @return an aggregated dataframe with all datasets.
 #' The shape of the dataframe is (#Experiments X #Participants X #Trials) X (exp,idv,iv,iv2,dv),
@@ -50,28 +50,14 @@ get_input_df <- function(analysis_conf) {
 #' run_analysis
 #' The function reads all datasets and analyze them according to the 'analysis_conf' parameter
 #' The output of the function is a csv file describing all of the analysis results
-#' @param analysis_conf a configuration class with the functions needed to read, preporocess,
+#' @param analysis_conf a configuration object with the functions needed to read, preporocess,
 #' and analyze the relevant datasets according to all relevant tests
 run_analysis <-function(analysis_conf) {
   dfs <- get_input_df(analysis_conf)
   analysis_fs <- analysis_conf@sum_fs(analysis_conf, unique(dfs$exp))
-  exp_analysis <- function(data, exp_name) {
-    set.seed(analysis_conf@seed)
-    data.frame(
-      non_directional = test_sign_consistency(data,'idv', c('dv','iv2'), 'iv',
-                                              null_dist_samples = analysis_conf@n_samp,
-                                              ci_reps = 10^5,
-                                              summary_function = analysis_fs[[exp_name]]$summary)[c('statistic','p', 'ci_low', 'ci_high')],
-      directional_effect = test_directional_effect(data,'idv', c('dv','iv2'), 'iv',
-                                                   null_dist_samples = analysis_conf@n_samp, ci_reps = 10^5, 
-                                                   summary_function = analysis_fs[[exp_name]]$summary)[c('statistic','p', 'ci_low', 'ci_high')],
-      quid = run_quid(data)[c('quid_bf')],
-      pbt = run_pbt(data, analysis_fs[[exp_name]]$test)[c('low','high','MAP')]
-    )
-  }
   res <- dfs %>%
     group_by(exp) %>%
-    group_modify(~exp_analysis (.x,.y[[1]]))
+    group_modify(~analysis_conf@analyze_exps_f(analysis_conf, analysis_fs, .x,.y[[1]]))
   
   # adjust p-values of the directional test
   if('directional_effect.p' %in% names(res)){

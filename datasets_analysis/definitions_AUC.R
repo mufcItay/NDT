@@ -54,7 +54,7 @@ preprocess_dfs_AUC <- function(df, ds_name) {
     mutate(iv = factor(iv), iv2 = factor(iv2)) %>% 
     group_by(idv, iv, iv2) %>% 
     count(idv, name = "n", .drop = F) %>% 
-    filter (n < 10) %>%
+    filter (n < 5) %>%
     pull(idv)
   if(length(exclusions)) { df <- df %>% filter(! idv %in% exclusions) }
   return(df)

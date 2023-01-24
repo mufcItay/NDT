@@ -69,14 +69,15 @@ create_sample_data <- function(p_mean, p_sd, seed = 1, N = 30, trials_per_cnd = 
 ##'
 prepare_data <- function(data, ci_percentile = 5) {
   # get directional effect
-  res_dir <- data %>% get_directional_effect(idv = 'id', dv = 'var', iv = 'condition', summary_function = stats::median)
+  res_dir <- data %>% get_directional_effect(idv = 'id', dv = 'var', iv = 'condition',
+                                             summary_function = mean)
   ord_effects <- order(res_dir$effect_per_id$score)
   res_dir$effect_per_id$orgid <- res_dir$effect_per_id$id[ord_effects]
   res_dir$effect_per_id$score <- sort(res_dir$effect_per_id$score)
   
   # get sign-consistency scores
   res_non_dir <- data %>% get_sign_consistency(idv = 'id', dv = 'var', iv = 'condition', 
-                                               summary_function = stats::median)
+                                               summary_function = mean)
   sc <- res_non_dir$consistency_per_id$score[res_dir$effect_per_id$orgid]
   # add sign_consistency to the directional analysis results dataframe
   res_dir$effect_per_id$sc <- sc
@@ -252,6 +253,9 @@ renamed_wn_data <- wn_data %>%
   rename(idv = id, iv = condition, dv = var)
 renamed_sn_data <- sn_data %>%
   rename(idv = id, iv = condition, dv = var)
+
+renamed_sn_data[renamed_sn_data$idv == 1,'dv'][1] <- 10^100
+run_quid(renamed_sn_data)
 wn_quid_res <- run_quid(renamed_wn_data)
 sn_quid_res <- run_quid(renamed_sn_data)
 wn_bf <- 1/ wn_quid_res$quid_bf

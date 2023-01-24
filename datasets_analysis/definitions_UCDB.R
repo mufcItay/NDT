@@ -5,7 +5,7 @@
 #' is 1, the function sets it to 1-1/2N, and if it is 0 it sets the rate to 1/2N; where N
 #' denotes the number of total trials)  
 #' @param mat a matrix of the condition labels (iv) and responses (dv) for each trial (rows).
-#' @param args a list of parameter values for the indepdent measure (iv)
+#' @param args a list of parameter values for the independent measure (iv)
 #' @return the difference between Z(hit_rate) and Z(fa_rate)
 get_participant_SDT_d <- function(mat, args = list(iv = 'iv', dv = 'dv')) {
   mat <- as.data.frame(mat)
@@ -119,7 +119,7 @@ get_sum_fs_UC <- function(analysis_conf, experiments) {
       test_f <- function(mat) {
         mat <- as.data.frame(mat)
         conds <- sort(unique(mat$iv))
-        return(wilcox.test(mat[mat$iv==conds[1],]$dv, 
+        return(t.test(mat[mat$iv==conds[1],]$dv,
                            mat[mat$iv==conds[2],]$dv)$p.value)}
     }
     return(list(summary = summary_f, test = test_f))
