@@ -11,9 +11,6 @@ source('datasets_analysis\\definitions.R')
 get_AUC <- function(mat, summary_f_args = list(iv = 'iv2', dv = 'dv')){
   mat <- as.data.frame(mat)
   if(length(colnames(mat)) <2) {
-    # not enough trials overall
-    browser()
-    print(mat)
     return(NA)
   }
 
@@ -50,13 +47,13 @@ preprocess_dfs_AUC <- function(df, ds_name) {
     dplyr::select(exp, idv, dv, iv2, iv) %>%
     drop_na()
   #exclude subjects from experiments if the have too few trials in each cell
-  exclusions <- df %>% 
+  exc <- df %>% 
     mutate(iv = factor(iv), iv2 = factor(iv2)) %>% 
     group_by(idv, iv, iv2) %>% 
     count(idv, name = "n", .drop = F) %>% 
     filter (n < 5) %>%
     pull(idv)
-  if(length(exclusions)) { df <- df %>% filter(! idv %in% exclusions) }
+  if(length(exc)) { df <- df %>% filter(! idv %in% exc) }
   return(df)
 }
 

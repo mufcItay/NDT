@@ -19,11 +19,9 @@ preprocess_dfs_cogdb  <- function(df, ds_name) {
     summarise(n = n(), .groups = 'drop_last') %>%
     filter(n < 5) %>%
     pull(unique_id)
-  
   df <- df %>% 
     dplyr::select(idv,iv,iv2,dv,exp)
   if(length(exc)) { df <- df %>% filter(! paste(exp, idv, sep = '_') %in% exc) }
-  
   return (df)
 }
 
@@ -39,6 +37,7 @@ get_sum_fs_cogdb <- function(analysis_conf, experiments) {
     # special case of an interaction effect
     if(startsWith(exp_name,'Battich') | 
        startsWith(exp_name,'Roelofs') | 
+       startsWith(exp_name,'Forti') | 
        startsWith(exp_name,'Yap')) {
       args <- interaction_args
       args$iv <- 'iv2'

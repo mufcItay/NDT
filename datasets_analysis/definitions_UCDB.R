@@ -39,6 +39,7 @@ preprocess_dfs_UC <- function(df, ds_name) {
   df <- df %>% 
     dplyr::select(exp, idv, dv, iv, iv2)
   min_trials <- 5
+  
   # remove participants with less than 2 observations in a cell
   if(startsWith(ds_name, 'Stein & van Peelen_2020') |
      startsWith(ds_name, 'Skora et al_2020')) {
@@ -57,7 +58,6 @@ preprocess_dfs_UC <- function(df, ds_name) {
       pull(unique_id)
   }
   df <- df %>% filter(! paste(exp, idv, sep = '_') %in% exc)
-  
   return(df)
 }
 

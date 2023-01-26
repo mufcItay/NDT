@@ -19,15 +19,13 @@ preprocess_dfs_cdb <- function(df, ds_name) {
     dplyr::select(exp, idv, iv, dv) %>%
     mutate(iv2 = -1)
   #exclude subjects from experiments if the have too few trials in each cell
-  
-  exclusions <- df %>% 
+  exc <- df %>% 
     mutate(iv = factor(iv)) %>% 
     group_by(idv, iv) %>% 
     count(idv, name = "n", .drop = F) %>% 
     filter (n < 5) %>% 
     pull(idv)
-  if(length(exclusions)) { df <- df %>% filter(! idv %in% exclusions) }
-  
+  if(length(exc)) { df <- df %>% filter(! idv %in% exc) }
   return (df)
 }
 

@@ -80,7 +80,7 @@ init_analysis <- function(type) {
     source(paste(dir_path, paste0(defs_prefix, '_AUC.R'), 
                  sep = .Platform$file.sep))
     conf <- new(analysisConfCName, 'datasets\\cdb\\AUCDB\\',
-                'results\\AUC_DB.csv', 'results\\AUC_Results.csv',
+                'results\\AUC_DB.csv', 'results\\Metacognitive Sensitivity_Results.csv',
                 preprocess_dfs_AUC, get_AUC, sum_fs = get_sum_fs_AUC, 
                 analyze_exps_f = run_nhst_analyses)
   }
@@ -90,7 +90,7 @@ init_analysis <- function(type) {
       source(paste(dir_path, paste0(defs_prefix, '_UCDB.R'), 
                  sep = .Platform$file.sep))
     conf <- new(analysisConfCName, 'datasets\\ucdb\\',
-                'results\\UC_DB.csv', 'results\\UCDB_Results.csv', 
+                'results\\UC_DB.csv', 'results\\Unconscious Processing_Results.csv', 
                 preprocess_dfs_UC, mean, sum_fs = get_sum_fs_UC, 
                 analyze_exps_f = run_all_analyses)
   }
@@ -99,8 +99,8 @@ init_analysis <- function(type) {
   if(type == cogdb_analysis_lbl) {
       source(paste(dir_path, paste0(defs_prefix, '_cogdb.R'), 
                  sep = .Platform$file.sep))
-    conf <- new(analysisConfCName, 'datasets\\cogdb\\','results\\UC_DB.csv', 
-                'results\\cogdb_Results.csv', preprocess_dfs_cogdb, mean,
+    conf <- new(analysisConfCName, 'datasets\\cogdb\\','', 
+                'results\\Cognitive Psychology_Results.csv', preprocess_dfs_cogdb, mean,
                 sum_fs = get_sum_fs_cogdb, analyze_exps_f = run_nhst_analyses)
   }
   return(conf)
@@ -148,6 +148,7 @@ run_all_analyses <- function(conf, analysis_fs, data, exp_name) {
 #' for DT - a single row with a p-value, statistic, low_ci and high_ci
 run_nhst_analyses <- function(conf, analysis_fs, data, exp_name) {
   set.seed(conf@seed)
+  
   data.frame(
     non_directional = test_sign_consistency(data,'idv', c('dv','iv2'), 'iv',
                                             null_dist_samples = conf@n_samp,
@@ -155,4 +156,5 @@ run_nhst_analyses <- function(conf, analysis_fs, data, exp_name) {
     directional_effect = test_directional_effect(data,'idv', c('dv','iv2'), 'iv',
                                                  null_dist_samples = conf@n_samp, ci_reps = 10^5,
                                                  summary_function = analysis_fs[[exp_name]]$summary)[c('statistic','p', 'ci_low', 'ci_high')])
+  
 }
