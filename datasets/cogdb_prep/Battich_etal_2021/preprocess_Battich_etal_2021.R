@@ -53,3 +53,8 @@ test_directional_effect(data_all %>% filter(exp == 'Battich_etal_2021_resp_1'),
 test_sign_consistency(data_all %>% filter(exp == 'Battich_etal_2021_resp_1'), 
                       idv = 'idv', dv = c('iv2','dv'), iv = 'iv', 
                         summary_function = get_effect_f)
+
+
+test_sign_consistency(data_all %>% filter(exp == 'Battich_etal_2021_resp_1', idv != 20), 
+                      idv = 'idv', dv = c('iv2','dv'), iv = 'iv', 
+                      summary_function = get_effect_f, max_invalid_reps = 3)

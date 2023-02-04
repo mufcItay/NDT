@@ -2,7 +2,6 @@ library(pracma)
 source('datasets_analysis\\definitions.R')
 #' get_AUC
 #' A summary function for the calculation of AUC
-
 #' @param mat a matrix of the accuracy and confidence scores (columns) for each trial (rows).
 #' The accuracy column is coded as 'iv2', and the confidence column is coded as 'dv'.
 #' NA is returned if the matrix misses one category of accuracy scores or if the matrix dimensions
@@ -46,14 +45,8 @@ preprocess_dfs_AUC <- function(df, ds_name) {
     rename(idv = Subj_idx, iv2 = Accuracy, dv = Confidence, iv = Response) %>% 
     dplyr::select(exp, idv, dv, iv2, iv) %>%
     drop_na()
-  #exclude subjects from experiments if the have too few trials in each cell
-  exc <- df %>% 
-    mutate(iv = factor(iv), iv2 = factor(iv2)) %>% 
-    group_by(idv, iv, iv2) %>% 
-    count(idv, name = "n", .drop = F) %>% 
-    filter (n < 5) %>%
-    pull(idv)
-  if(length(exc)) { df <- df %>% filter(! idv %in% exc) }
+
+  df <- exclude_participants(df, vars(iv,iv2))
   return(df)
 }
 

@@ -72,9 +72,57 @@ summary_f <- function(mat) {
 }
 
 
-get_directional_effect(data %>% mutate(iv2 = 11) %>%filter(exp == 'Skora et al_2020_1'), 
-                       idv = 'idv', iv = 'iv', dv = c('dv','iv2'), 
-                       summary_function =summary_f )
-test_sign_consistency(data %>% mutate(iv2 = 11) %>%filter(exp == 'Skora et al_2020_1'), 
-                       idv = 'idv', iv = 'iv', dv = c('dv','iv2'), 
-                       summary_function =summary_f)
+# exclude participants with zero variance in all conditions
+# exclude dv from grouping variables before zero variability exclusions
+factor_vars <- vars(unique_id, iv)
+exc_zero_var <- data %>%
+  mutate(unique_id = paste(exp, idv, sep = '_')) %>%
+  filter(exp == 'Skora et al_2020_1') %>%
+  group_by_at(.vars = factor_vars) %>% 
+  summarise(var = var(dv)) %>% 
+  group_by(unique_id) %>% 
+  summarise(var = sum(var)) %>% 
+  filter(var == 0) %>% 
+  pull(unique_id)
+
+# exclude participants with too few trials
+min_trials <- 5
+condition_vars <- vars(unique_id, iv,dv)
+exc_low_trials <- data %>%
+  mutate(unique_id = paste(exp, idv, sep = '_')) %>%
+  filter(exp == 'Skora et al_2020_1') %>% 
+  group_by_at(.vars = condition_vars) %>% 
+  count(unique_id, name = "n", .drop = F) %>% 
+  filter (n < min_trials) %>%
+  pull(unique_id)
+source('C://Users//Itay//Desktop//Itay//NDT//datasets_analysis//pbt.R')
+skora1 <- data %>%
+  mutate(unique_id = paste(exp, idv, sep = '_')) %>%
+  filter(exp == 'Skora et al_2020_1') %>%
+  filter(!unique_id %in% c(exc_low_trials,exc_zero_var))
+skora_only_n_trials <- data %>%
+  mutate(unique_id = paste(exp, idv, sep = '_')) %>%
+  filter(exp == 'Skora et al_2020_1') %>%
+  filter(!unique_id %in% c(exc_low_trials))
+get_participant_SDT_d <- function(mat, args = list(iv = 'iv', dv = 'dv')) {
+  mat <- as.data.frame(mat)
+  conds <- sort(unique(mat[,args$iv]))
+  calc_rate_nrom <- function(cnd, mat) {
+    cnd_dat <- mat[mat[,args$iv] == cnd,]
+    cnt <- sum(cnd_dat[,args$dv])
+    len <- length(cnd_dat[,args$dv]) 
+    rate <- ifelse(cnt == 0, 1 / (2*len), 
+                   ifelse(cnt == len, 1- 1 / (2*len), cnt / len))
+    return (qnorm(rate))
+  }
+  rate_norms <- sapply(conds, calc_rate_nrom, mat = mat)
+  return (diff(rate_norms))
+}
+
+test_f <- function(mat) {
+  obs_d <- get_participant_SDT_d(mat)
+  return(perm_test_subject(as.data.frame(mat), obs_d, get_participant_SDT_d))
+}
+
+res_all_excs <- run_pbt(skora1, test_f)
+res_only_ntrials_exc <- run_pbt(skora_only_n_trials, test_f)

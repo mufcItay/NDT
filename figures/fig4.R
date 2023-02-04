@@ -8,7 +8,7 @@ library(scales) # to access break formatting functions
 source('datasets_analysis//definitions.R')
 
 alpha <- .05
-pal <-   c("#95D59D", "#3ECFC9", "#F4B26A", "#EB5F4A")
+pal <-   c("#B25E9D", "#3ECFC9", "#F4B26A", "#EB5F4A")
 
 # transform values to get proper labels for the p-values
 scientific_10 <- function(x) {
@@ -40,7 +40,12 @@ ns_results <- all_results[all_results$directional_effect.p > alpha,]
 ns_sum_Ns <- ns_results %>%
   group_by(type) %>%
   summarise(N = n())
-ns_Nunique <- sum(ns_sum_Ns %>% filter(!startsWith(type,'Metacog')) %>% pull(N))
+
+num_before_uc <- nrow(all_results) - nrow(all_results %>% 
+                                           filter(startsWith(type,'Unconscious')))
+num_ns_before_uc <- nrow(ns_results) - nrow(ns_results %>% 
+                                           filter(startsWith(type,'Unconscious')))
+
 sig_nondir_cat <- ns_results %>%
   mutate(non_dir_effect = non_directional.p <= alpha) %>%
   group_by(type, non_dir_effect) %>%
@@ -74,16 +79,20 @@ ns_n <- length(unique(paste(ns_results$type,ns_results$exp)))
 ##### GENERATE FIGURE
 # generate the scatter plot of all results together 
 eps <- 10^-5
-alpha_rects <- .5
+sig_areas_x_marg <- .1
+sig_areas_y_marg <- .01
+sig_areas_labels <- data.frame( label = paste0(c("p < ", "p > "), alpha),
+  x = alpha + c(-sig_areas_x_marg/2.5, sig_areas_x_marg),
+  y = alpha - rep(sig_areas_y_marg, 2))
 scatter_plt <- ns_results %>%
   mutate(non_directional.p = eps + non_directional.p*(1-eps),
          directional_effect.p = eps + directional_effect.p*(1-eps)) %>%
   ggplot(aes(x=non_directional.p,y=directional_effect.p, fill = type)) +
-  annotate('rect',ymin=alpha, ymax=1, xmin=eps,xmax=alpha,fill='#FDF9EC',alpha=alpha_rects) +
+  geom_vline(xintercept = alpha, color = 'black', size = 1.5) +
   geom_point(size = 4, colour = 'black', stroke = 1, shape = 21) +
   scale_fill_manual(values = pal) +
   labs(y=expression('Directional p-value ' ~(log[10])),
-       x=expression('Non-Directional p-value ' ~(log[10]))) +
+       x=expression('Sign-Consistency p-value ' ~(log[10]))) +
   scale_y_log10(breaks = c(alpha, 1),
                 labels = c(expression(alpha), '1'),
                 limits = c(0.75 * alpha, 1)) +
@@ -91,6 +100,8 @@ scatter_plt <- ns_results %>%
                 labels = c(math_format()(log10(eps)), expression(alpha),'1')) +
   coord_fixed() +
   theme_classic() +
+  annotate("text", x = sig_areas_labels$x, y = sig_areas_labels$y, 
+           label = sig_areas_labels$label, size = 16/.pt) +
   theme(axis.title.x = element_text(size=22),
         axis.title.y = element_text(size=18),
         axis.text = element_text(size=18),
@@ -119,10 +130,5 @@ density_nondir <- ns_results %>%
 
 aggreagated_plt <-  density_nondir + scatter_plt +
   plot_layout(ncol = 1, nrow = 2, heights = c(.5,1))
-ggsave(paste('figures',paste0('figure4_aggregated', '.svg'), sep = .Platform$file.sep),
+ggsave(paste('figures',paste0('figure4', '.svg'), sep = .Platform$file.sep),
        plot = aggreagated_plt, width = 10, height = 10)
-ggsave(paste('figures',paste0('figure4_scatter', '.svg'), sep = .Platform$file.sep),
-       plot = scatter_plt, width = 6, height = 10)
-ggsave(paste('figures',paste0('figure4_density', '.svg'), sep = .Platform$file.sep),
-       plot = density_nondir, width = 4, height = 10)
-

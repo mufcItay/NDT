@@ -38,26 +38,14 @@ preprocess_dfs_UC <- function(df, ds_name) {
   if(! 'iv2' %in% names(df)) { df$iv2 <- rep(INVALID_VALUE_CODE, nrow(df))} 
   df <- df %>% 
     dplyr::select(exp, idv, dv, iv, iv2)
-  min_trials <- 5
-  
+
   # remove participants with less than 2 observations in a cell
   if(startsWith(ds_name, 'Stein & van Peelen_2020') |
      startsWith(ds_name, 'Skora et al_2020')) {
-    exc <- df %>%
-      group_by(exp, idv, iv, iv2,dv) %>%
-      summarise(n = n(), .groups = 'drop_last') %>%
-      filter(n < min_trials) %>%
-      pull(idv)
-    
+    df <- exclude_participants(df, vars(iv, iv2, dv))
   } else {
-    exc <- df %>%
-      mutate(unique_id = paste(exp, idv, sep = '_')) %>%
-      group_by(unique_id, iv, iv2) %>%
-      summarise(n = n(), .groups = 'drop_last') %>%
-      filter(n < min_trials) %>%
-      pull(unique_id)
+    df <- exclude_participants(df, vars(iv, iv2))
   }
-  df <- df %>% filter(! paste(exp, idv, sep = '_') %in% exc)
   return(df)
 }
 

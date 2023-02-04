@@ -134,3 +134,43 @@ get_diff_effect <- function(mat, args = list(summary_f = mean, iv = 'iv', dv = '
             pull(effect))
 }  
 
+
+exclude_participants <- function(data, condition_vars, min_trials = 5) {
+  # add a unique identifier (exp + idv)
+  data_exc <- data %>%
+    mutate(unique_id = paste(exp, idv, sep = '_'))
+  condition_vars <- c(vars(unique_id),condition_vars)
+  # set all columns as factor vars
+  factor_vars <- condition_vars
+  factor_vars[sapply(factor_vars, function(v) rlang::quo_get_expr(v) == 'dv')] = NULL
+  
+  factor_var_names <- as.character(sapply(factor_vars, rlang::quo_get_expr))
+  data_exc[,factor_var_names] <- lapply(data_exc[,factor_var_names], factor)
+  
+  # exclude participants with too few trials
+  exc_low_trials <- data_exc %>% 
+    group_by_at(.vars = condition_vars) %>% 
+    count(unique_id, name = "n", .drop = F) %>% 
+    filter (n < min_trials) %>%
+    pull(unique_id)
+
+  # exclude participants with zero variance in all conditions
+  # exclude dv from grouping variables before zero variability exclusions
+  exc_zero_var <- data_exc %>% 
+    group_by_at(.vars = factor_vars) %>% 
+    summarise(var = var(dv)) %>% 
+    group_by(unique_id) %>% 
+    summarise(var = sum(var)) %>% 
+    filter(var == 0) %>% 
+    pull(unique_id)
+  
+  # if there are participants to exclude, exclude them  
+  exc_all = unique(c(exc_low_trials, exc_zero_var))
+
+  if(length(exc_all)) {
+    data <- data %>% 
+      filter(!paste(exp, idv, sep = '_') %in% exc_all) 
+  }
+  return(data)
+}
+

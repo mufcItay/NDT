@@ -13,15 +13,10 @@ preprocess_dfs_cogdb  <- function(df, ds_name) {
   df <- df %>% 
     mutate(iv = factor(iv))
   if(! 'iv2' %in% names(df)) { df$iv2 <- rep(INVALID_VALUE_CODE, nrow(df))} 
-  exc <- df %>%
-    mutate(unique_id = paste(exp, idv, sep = '_')) %>%
-    group_by(unique_id, iv, iv2) %>%
-    summarise(n = n(), .groups = 'drop_last') %>%
-    filter(n < 5) %>%
-    pull(unique_id)
+  df <- exclude_participants(df, vars(iv, iv2))
+  
   df <- df %>% 
     dplyr::select(idv,iv,iv2,dv,exp)
-  if(length(exc)) { df <- df %>% filter(! paste(exp, idv, sep = '_') %in% exc) }
   return (df)
 }
 

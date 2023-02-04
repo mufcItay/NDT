@@ -52,9 +52,8 @@ generate_nhst_plot <- function(data, graphics_conf, alpha = .05, is_sc = TRUE,
     geom_point(size = 5, shape=21, 
                colour = 'black', stroke =2) +
     ylim(min(data$scores) - .1, max(data$scores) + .1) +
-    geom_hline(yintercept = ifelse(is_sc, 50, 0), linetype='dotted') +
     geom_vline(xintercept = ifelse(quid_n == invalid_quid_res, 1,quid_n + .5),
-               size = ifelse(quid_n == invalid_quid_res, 0, 2), linetype='dotted',
+               linewidth = ifelse(quid_n == invalid_quid_res, 0, 2), linetype='dotted',
                color = graphics_conf$split_color) +
     theme_classic() +
     scale_fill_manual(breaks = c(TRUE,FALSE),
@@ -88,9 +87,9 @@ generate_quid_plot <- function(data, graphics_conf, criteria = 3, eps = 1/10^5) 
   plt <- ggplot(data, aes(x = exp, y = log_bf, fill = effect)) +
     xlab('Experiment') +
     ylab('log<sub>10</sub>(BF)<br><i>global null</i> ↓') +
-    geom_hline(yintercept = 0, linetype='dotted', size = 2) +
-    geom_hline(yintercept = log10(criteria), linetype='solid', size = 1.5, color = graphics_conf$pale_color) +
-    geom_hline(yintercept = log10(1/criteria), linetype='solid', size = 1.5, color = graphics_conf$pale_color) +
+    geom_hline(yintercept = 0, linetype='dotted', linewidth = 2) +
+    geom_hline(yintercept = log10(criteria), linetype='solid', linewidth = 1.5, color = graphics_conf$pale_color) +
+    geom_hline(yintercept = log10(1/criteria), linetype='solid', linewidth = 1.5, color = graphics_conf$pale_color) +
     geom_point(size = 5.5, shape=21, 
                colour = 'black', stroke =2) +
     ggtitle('Qualitative Individual Differences (QUID)') +
@@ -136,7 +135,7 @@ generate_pbt_plot <- function(data, graphics_conf, quid_n = invalid_quid_res) {
     ggtitle('Prevalence Bayesian Test (PBT)') +
     geom_hline(yintercept = 0) +
     geom_vline(xintercept = ifelse(quid_n == invalid_quid_res, 1,quid_n + .5),
-              size = ifelse(quid_n == invalid_quid_res, 0, 2), linetype='dotted',
+               linewidth = ifelse(quid_n == invalid_quid_res, 0, 2), linetype='dotted',
               color = graphics_conf$split_color) +
     theme_classic() +
     scale_fill_manual(breaks = c(TRUE,FALSE),
@@ -167,7 +166,7 @@ graphics_conf <- list(title_size = 40, size_seg = 2, color_spreading_lines = '#7
                       med_color = 'gray', pale_color = "#E9CB9A", split_color = 'black',
                       vline_size = 1, x_title_size = 22, x_text_size = 16)
 # read the results of the UC database 
-res_summary_fn <- 'UCDB_Results_wScores.csv'
+res_summary_fn <- 'Unconscious Processing_UPDATEDEXC_Imporved.csv'
 results <- read.csv(paste('results', res_summary_fn, sep=.Platform$file.sep))
 results$long_exp_name <- results$exp
 short_exp_name <- sapply(unique(results$exp), get_initials)

@@ -63,11 +63,11 @@
 <polyline points='820.48,80.88 834.73,80.88 ' style='stroke-width: 3.20; stroke-linecap: butt;' />
 <polyline points='827.60,80.88 827.60,319.17 ' style='stroke-width: 3.20; stroke-linecap: butt;' />
 <polyline points='820.48,319.17 834.73,319.17 ' style='stroke-width: 3.20; stroke-linecap: butt;' />
-<polyline points='915.45,291.98 929.69,291.98 ' style='stroke-width: 3.20; stroke-linecap: butt;' />
-<polyline points='922.57,291.98 922.57,362.40 ' style='stroke-width: 3.20; stroke-linecap: butt;' />
-<polyline points='915.45,362.40 929.69,362.40 ' style='stroke-width: 3.20; stroke-linecap: butt;' />
-<polyline points='1010.42,339.42 1024.66,339.42 ' style='stroke-width: 3.20; stroke-linecap: butt;' />
-<polyline points='1017.54,339.42 1017.54,369.68 ' style='stroke-width: 3.20; stroke-linecap: butt;' />
+<polyline points='915.45,326.24 929.69,326.24 ' style='stroke-width: 3.20; stroke-linecap: butt;' />
+<polyline points='922.57,326.24 922.57,369.68 ' style='stroke-width: 3.20; stroke-linecap: butt;' />
+<polyline points='915.45,369.68 929.69,369.68 ' style='stroke-width: 3.20; stroke-linecap: butt;' />
+<polyline points='1010.42,327.39 1024.66,327.39 ' style='stroke-width: 3.20; stroke-linecap: butt;' />
+<polyline points='1017.54,327.39 1017.54,369.68 ' style='stroke-width: 3.20; stroke-linecap: butt;' />
 <polyline points='1010.42,369.68 1024.66,369.68 ' style='stroke-width: 3.20; stroke-linecap: butt;' />
 <circle cx='162.82' cy='328.30' r='6.75' style='stroke-width: 2.83; fill: #BEBEBE;' />
 <circle cx='257.79' cy='369.68' r='6.75' style='stroke-width: 2.83; fill: #FFFFFF;' />
@@ -77,8 +77,8 @@
 <circle cx='637.67' cy='239.64' r='6.75' style='stroke-width: 2.83; fill: #FF0000;' />
 <circle cx='732.63' cy='321.17' r='6.75' style='stroke-width: 2.83; fill: #BEBEBE;' />
 <circle cx='827.60' cy='213.37' r='6.75' style='stroke-width: 2.83; fill: #FF0000;' />
-<circle cx='922.57' cy='332.70' r='6.75' style='stroke-width: 2.83; fill: #FF0000;' />
-<circle cx='1017.54' cy='369.68' r='6.75' style='stroke-width: 2.83; fill: #FFFFFF;' />
+<circle cx='922.57' cy='363.21' r='6.75' style='stroke-width: 2.83; fill: #BEBEBE;' />
+<circle cx='1017.54' cy='367.03' r='6.75' style='stroke-width: 2.83; fill: #BEBEBE;' />
 <line x1='105.84' y1='369.68' x2='1074.52' y2='369.68' style='stroke-width: 1.07; stroke-linecap: butt;' />
 <line x1='875.09' y1='384.14' x2='875.09' y2='65.92' style='stroke-width: 4.27; stroke-dasharray: 5.69,17.07; stroke-linecap: butt;' />
 </g>
@@ -109,8 +109,8 @@
 <text x='637.67' y='400.53' text-anchor='middle' style='font-size: 16.00px;fill: #4D4D4D; font-family: "Arial";' textLength='20.46px' lengthAdjust='spacingAndGlyphs'>N2</text>
 <text x='732.63' y='400.53' text-anchor='middle' style='font-size: 16.00px;fill: #4D4D4D; font-family: "Arial";' textLength='20.46px' lengthAdjust='spacingAndGlyphs'>N3</text>
 <text x='827.60' y='400.53' text-anchor='middle' style='font-size: 16.00px;fill: #4D4D4D; font-family: "Arial";' textLength='18.67px' lengthAdjust='spacingAndGlyphs'>Z7</text>
-<text x='922.57' y='400.53' text-anchor='middle' style='font-size: 16.00px;fill: #4D4D4D; font-family: "Arial";' textLength='30.24px' lengthAdjust='spacingAndGlyphs'>SV2</text>
-<text x='1017.54' y='400.53' text-anchor='middle' style='font-size: 16.00px;fill: #4D4D4D; font-family: "Arial";' textLength='30.24px' lengthAdjust='spacingAndGlyphs'>SV4</text>
+<text x='922.57' y='400.53' text-anchor='middle' style='font-size: 16.00px;fill: #4D4D4D; font-family: "Arial";' textLength='30.24px' lengthAdjust='spacingAndGlyphs'>SV1</text>
+<text x='1017.54' y='400.53' text-anchor='middle' style='font-size: 16.00px;fill: #4D4D4D; font-family: "Arial";' textLength='30.24px' lengthAdjust='spacingAndGlyphs'>SV2</text>
 <text x='590.18' y='422.02' text-anchor='middle' style='font-size: 22.00px; font-family: "Arial";' textLength='111.30px' lengthAdjust='spacingAndGlyphs'>Experiment</text>
 <text transform='translate(37.92,225.03) rotate(-90)' text-anchor='middle' style='font-size: 22.00px; font-family: "Arial";' textLength='211.62px' lengthAdjust='spacingAndGlyphs'>Estimated prevalence</text>
 <text transform='translate(61.68,225.03) rotate(-90)' text-anchor='middle' style='font-size: 22.00px; font-family: "Arial";' textLength='268.65px' lengthAdjust='spacingAndGlyphs'>of within-subject effects (%)</text>

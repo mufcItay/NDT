@@ -97,3 +97,57 @@ v1 <- exp1_v1 %>%
 v2 <- exp1_v2 %>%
   group_by(idv)%>%
   group_modify(~data.frame(d=get_participant_SDT_d(.x,args = list(iv = 'iv2', dv = 'dv'))/2^.5))
+
+
+library(weaknull)
+svp_args <- list(iv = 'iv2', dv = 'dv')
+summary_f <- function(mat) {
+  return (get_participant_SDT_d(mat, svp_args))
+}
+
+# exc
+min_trials <- 5
+exc <- data %>% filter(exp == 'Stein & van Peelen_2020_3_LOC_2') %>%
+  mutate(unique_id = paste(exp, idv, sep = '_')) %>%
+  group_by(unique_id, iv, iv2,dv) %>%
+  summarise(n = n(), .groups = 'drop_last') %>%
+  filter(n < min_trials) %>%
+  pull(unique_id)
+data_SVP2 <- data %>% filter(exp == 'Stein & van Peelen_2020_3_LOC_2') %>%
+  filter(! paste(exp, idv, sep = '_') %in% exc)
+
+res_de<-test_directional_effect(data_SVP2,
+                        idv = 'idv', dv = c('iv2','dv'), iv = 'iv',
+                        summary_function = summary_f,
+                        null_dist_samples = 10^5)
+res_sc <- test_sign_consistency(data_SVP2,
+                        idv = 'idv', dv = c('iv2','dv'), iv = 'iv',
+                        summary_function = summary_f,
+                        null_dist_samples = 10^5)
+
+test_f <- function(mat) {
+  conds <- sort(unique(mat$iv))
+  obs <- get_participant_SDT_d(mat[mat$iv == conds[1],], svp_args) - 
+    get_participant_SDT_d(mat[mat$iv == conds[2],], svp_args)
+  return(perm_test_subject(as.data.frame(mat), obs, get_participant_SDT_d,  summary_f_args =  
+                             list(iv = 'iv', dv = 'dv', iv2 = 'iv2')))
+}
+
+res_pbt <- data_SVP2 %>% 
+  group_by(idv) %>%
+  group_modify(~data.frame(p = test_f(.x)))
+
+res_pbt_p <- run_pbt(data_SVP2, test_f)[c('low','high','MAP')]
+
+
+#################################
+summary_f_null <- function(mat) {
+  return (get_participant_SDT_d(mat, svp_args))
+}
+f <- function(ind, d) {
+  d <- d %>%  group_by(idv) %>% mutate(iv=sample(iv))
+  scores <- get_sign_consistency(d, idv = 'idv', dv = c('iv2','dv'), iv = 'iv',
+                                 summary_function = summary_f_null)
+  return(scores$consistency_per_id$score)
+}
+scs <- lapply(1:10,f, d= data_SVP2)

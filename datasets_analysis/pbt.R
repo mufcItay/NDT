@@ -15,12 +15,12 @@ library(dplyr)
 #' @return a list including the low and high bounds of the HDI for the prevalence of the effect
 run_pbt <- function(data, test_function, alpha = .05, hdi_width = .95) {
   print('Analyzing a new exp')
-  res_dir <- data %>% 
+  res_pbt <- data %>% 
     group_by(idv) %>%
     group_modify(~data.frame(p = test_function(.x)))
   # count the prevalence of significant results in each dataset and compare to chance
-  N=sum(!is.na(res_dir$p))
-  Nsig = sum(res_dir$p < alpha, na.rm=T)
+  N=sum(!is.na(res_pbt$p))
+  Nsig = sum(res_pbt$p < alpha, na.rm=T)
   prevalence_hdpi = bayesprev_hpdi(hdi_width, Nsig, N)
   prev_above_zero <- 0 < prevalence_hdpi[1]
   prevalence_MAP = bayesprev_map(Nsig, N)
