@@ -112,7 +112,7 @@ init_analysis <- function(type) {
 #' @param conf a configuration object to run all analyses according to
 #' @param analysis_fs a list that maps between experiment labels and the analysis
 #' function to use.  
-#' @param data the data of the given experiment to analyze
+#' @param data the data of the given experiment to analyze (#Participants * #Trials) X (#Recorded Variables)
 #' @param exp_name the name of the experiment to analyze
 #' @return a data frame with all of the results:
 #' for NDT - (N_participants X (p-value, statistic, individual scores))

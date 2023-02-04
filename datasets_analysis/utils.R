@@ -135,6 +135,21 @@ get_diff_effect <- function(mat, args = list(summary_f = mean, iv = 'iv', dv = '
 }  
 
 
+#' exclude_participants
+#' The function excludes participants with less than 'min_trials' (an argument),
+#' observations in each cell according to the 'condition_vars' argument, 
+#' and participants with no variability in the dependent measure in all conditions.
+#' The function assumed that the datfarame ('data' argument) includes a column
+#' of the dependent measure names 'dv'.
+#'
+#' @param data the dataframe of all participants to process (#Participants * #Trials) X (#Recorded Variables)
+#' @param condition_vars the conditions of the experiment (use vars(cond1, cond2))
+#' @param min_trials the minimal number of trials required for a participant to
+#' be included after applying this function (default of 5 means that participants
+#' with at least 5 trials in each condition will be included)
+#' @return the dataframe after excluding participants with less than 'min_trials'
+#' observations in each cell, and participants with zero variability in the
+#' dependent measure for all conditions
 exclude_participants <- function(data, condition_vars, min_trials = 5) {
   # add a unique identifier (exp + idv)
   data_exc <- data %>%
@@ -166,7 +181,6 @@ exclude_participants <- function(data, condition_vars, min_trials = 5) {
   
   # if there are participants to exclude, exclude them  
   exc_all = unique(c(exc_low_trials, exc_zero_var))
-
   if(length(exc_all)) {
     data <- data %>% 
       filter(!paste(exp, idv, sep = '_') %in% exc_all) 
