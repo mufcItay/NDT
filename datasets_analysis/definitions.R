@@ -49,10 +49,10 @@ setMethod("initialize", analysisConfCName,
           })
 
 
-confidence_analysis_lbl <- 'cdb'
-AUC_analysis_lbl <- 'auc'
-UCDB_analysis_lbl <- 'ucdb'
-cogdb_analysis_lbl <- 'cogdb'
+Confidence_analysis_lbl <- 'cdb'
+Metacognitive_Sensitivity_analysis_lbl <- 'auc'
+Unconscious_Processing_analysis_lbl <- 'ucdb'
+Cognitive_Psychology_analysis_lbl <- 'cogdb'
 
 #' init_analysis
 #' the function gets a string description of configurations and returns a
@@ -65,8 +65,8 @@ init_analysis <- function(type) {
   defs_prefix <- 'definitions'
 
   ## Confidence analysis
-  if(type == confidence_analysis_lbl) {
-    source(paste(dir_path, paste0(defs_prefix, '_confidence.R'), 
+  if(type == Confidence_analysis_lbl) {
+    source(paste(dir_path, paste0(defs_prefix, '_Confidence.R'), 
                  sep = .Platform$file.sep))
     # create an instance of the analysis configuration for the confidence DB
     conf <- new(analysisConfCName, 'datasets\\cdb\\CONFDB\\', 'results\\Confidence_DB.csv', 
@@ -75,9 +75,9 @@ init_analysis <- function(type) {
   }
   
   
-  ## AUC analysis
-  if(type == AUC_analysis_lbl) {
-    source(paste(dir_path, paste0(defs_prefix, '_AUC.R'), 
+  ## Metacognitive Sensitivity analysis
+  if(type == Metacognitive_Sensitivity_analysis_lbl) {
+    source(paste(dir_path, paste0(defs_prefix, '_Metacognitive_Sensitivity.R'), 
                  sep = .Platform$file.sep))
     conf <- new(analysisConfCName, 'datasets\\cdb\\AUCDB\\',
                 'results\\AUC_DB.csv', 'results\\Metacognitive Sensitivity_Results.csv',
@@ -85,9 +85,9 @@ init_analysis <- function(type) {
                 analyze_exps_f = run_nhst_analyses)
   }
 
-  ## UC analysis
-  if(type == UCDB_analysis_lbl) {
-      source(paste(dir_path, paste0(defs_prefix, '_UCDB.R'), 
+  ## Unconscious Processing analysis
+  if(type == Unconscious_Processing_analysis_lbl) {
+      source(paste(dir_path, paste0(defs_prefix, '_Unconscious_Processing.R'), 
                  sep = .Platform$file.sep))
     conf <- new(analysisConfCName, 'datasets\\ucdb\\',
                 'results\\UC_DB.csv', 'results\\Unconscious Processing_Results.csv', 
@@ -95,9 +95,9 @@ init_analysis <- function(type) {
                 analyze_exps_f = run_all_analyses)
   }
   
-  ## cogdb analysis
-  if(type == cogdb_analysis_lbl) {
-      source(paste(dir_path, paste0(defs_prefix, '_cogdb.R'), 
+  ## Cognitive Psychology analysis
+  if(type == Cognitive_Psychology_analysis_lbl) {
+      source(paste(dir_path, paste0(defs_prefix, '_Cognitive_Psychology.R'), 
                  sep = .Platform$file.sep))
     conf <- new(analysisConfCName, 'datasets\\cogdb\\','', 
                 'results\\Cognitive Psychology_Results.csv', preprocess_dfs_cogdb, mean,

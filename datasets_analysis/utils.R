@@ -138,9 +138,11 @@ get_diff_effect <- function(mat, args = list(summary_f = mean, iv = 'iv', dv = '
 #' exclude_participants
 #' The function excludes participants with less than 'min_trials' (an argument),
 #' observations in each cell according to the 'condition_vars' argument, 
-#' and participants with no variability in the dependent measure in all conditions.
+#' and participants with no variability for the dependent measure within both
+#' independent variable levels.
 #' The function assumed that the datfarame ('data' argument) includes a column
-#' of the dependent measure names 'dv'.
+#' of the dependent measure names 'dv', and that the independent measure is 
+#' named 'iv'.
 #'
 #' @param data the dataframe of all participants to process (#Participants * #Trials) X (#Recorded Variables)
 #' @param condition_vars the conditions of the experiment (use vars(cond1, cond2))
@@ -157,8 +159,11 @@ exclude_participants <- function(data, condition_vars, min_trials = 5) {
   condition_vars <- c(vars(unique_id),condition_vars)
   # set all columns as factor vars
   factor_vars <- condition_vars
-  factor_vars[sapply(factor_vars, function(v) rlang::quo_get_expr(v) == 'dv')] = NULL
-  
+  factor_vars[sapply(factor_vars, 
+                     function(v) rlang::quo_get_expr(v) == 'dv')] = NULL
+  non_iv_factor_vars <- factor_vars 
+  non_iv_factor_vars[sapply(factor_vars, 
+                            function(v) rlang::quo_get_expr(v) == 'iv')] = NULL
   factor_var_names <- as.character(sapply(factor_vars, rlang::quo_get_expr))
   data_exc[,factor_var_names] <- lapply(data_exc[,factor_var_names], factor)
   
@@ -169,12 +174,12 @@ exclude_participants <- function(data, condition_vars, min_trials = 5) {
     filter (n < min_trials) %>%
     pull(unique_id)
 
-  # exclude participants with zero variance in all conditions
-  # exclude dv from grouping variables before zero variability exclusions
-  exc_zero_var <- data_exc %>% 
-    group_by_at(.vars = factor_vars) %>% 
+  # exclude participants with zero variance in all levels of the independent
+  # variable
+  exc_zero_var <- data_exc %>%
+    group_by_at(.vars = non_iv_factor_vars) %>% 
     summarise(var = var(dv)) %>% 
-    group_by(unique_id) %>% 
+    group_by_at(.vars = vars(unique_id)) %>% 
     summarise(var = sum(var)) %>% 
     filter(var == 0) %>% 
     pull(unique_id)

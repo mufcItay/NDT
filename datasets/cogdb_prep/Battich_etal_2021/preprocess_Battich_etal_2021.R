@@ -54,6 +54,16 @@ test_sign_consistency(data_all %>% filter(exp == 'Battich_etal_2021_resp_1'),
                       idv = 'idv', dv = c('iv2','dv'), iv = 'iv', 
                         summary_function = get_effect_f)
 
+# exclude participants with zero variance in all conditions
+# exclude dv from grouping variables before zero variability exclusions
+exc_zero_var <- data_all %>%
+  mutate(unique_id = factor(paste(exp, idv, sep = '_'))) %>%
+  group_by_at(.vars = vars(unique_id, iv2)) %>% 
+  summarise(var = var(dv)) %>% 
+  group_by_at(.vars = vars(unique_id)) %>% 
+  summarise(var = sum(var)) %>% 
+  filter(var == 0) %>% 
+  pull(unique_id)
 
 test_sign_consistency(data_all %>% filter(exp == 'Battich_etal_2021_resp_1', idv != 20), 
                       idv = 'idv', dv = c('iv2','dv'), iv = 'iv', 

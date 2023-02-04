@@ -166,7 +166,7 @@ graphics_conf <- list(title_size = 40, size_seg = 2, color_spreading_lines = '#7
                       med_color = 'gray', pale_color = "#E9CB9A", split_color = 'black',
                       vline_size = 1, x_title_size = 22, x_text_size = 16)
 # read the results of the UC database 
-res_summary_fn <- 'Unconscious Processing_UPDATEDEXC_Imporved.csv'
+res_summary_fn <- 'Unconscious Processing_Results.csv'
 results <- read.csv(paste('results', res_summary_fn, sep=.Platform$file.sep))
 results$long_exp_name <- results$exp
 short_exp_name <- sapply(unique(results$exp), get_initials)
