@@ -37,7 +37,14 @@ ns_sum_Ns <- ns_results %>%
   group_by(type) %>%
   summarise(N = n())
 Nunique_ns <- length(unique(paste(ns_results$exp,ns_results$type, sep = '_')))
+# uncorrected across all types
+sig_nondir_cat <- ns_results %>%
+  mutate(non_dir_effect = non_directional.p <= alpha) %>% 
+  group_by(non_dir_effect) %>%
+  summarise(N = n()) %>%
+  summarise(perc_nondir_sig = 100 * (1 - first(N) / sum(N)))
 
+# 
 # uncorrected - significant sign-consistency per category
 sig_nondir_cat <- ns_results %>%
   mutate(non_dir_effect = non_directional.p <= alpha) %>%

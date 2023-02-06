@@ -254,7 +254,6 @@ renamed_wn_data <- wn_data %>%
 renamed_sn_data <- sn_data %>%
   rename(idv = id, iv = condition, dv = var)
 
-renamed_sn_data[renamed_sn_data$idv == 1,'dv'][1] <- 10^100
 run_quid(renamed_sn_data)
 wn_quid_res <- run_quid(renamed_wn_data)
 sn_quid_res <- run_quid(renamed_sn_data)
