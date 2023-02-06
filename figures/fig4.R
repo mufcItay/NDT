@@ -31,32 +31,39 @@ all_results <- do.call(rbind, lapply(results_fns, read_res_df))
 sum_N <- all_results %>%
   group_by(type) %>%
   summarise(N = n())
-# exclude the metacognitive sensitivity studies because we analyze most of
-# the Confidence DB studies twice (confidence and metacoginitive sensitivity analyses)
-Nunique <- sum(sum_N %>% filter(!startsWith(type,'Metacog')) %>% pull(N))
-
-# analyze the remaining non-significant results
-ns_results <- all_results[all_results$directional_effect.p > alpha,]
+Nunique <- length(unique(unique(paste(all_results$exp, all_results$type, sep = '_'))))
+# summarise non-significant results
 ns_sum_Ns <- ns_results %>%
   group_by(type) %>%
   summarise(N = n())
+Nunique_ns <- length(unique(paste(ns_results$exp,ns_results$type, sep = '_')))
 
-num_before_uc <- nrow(all_results) - nrow(all_results %>% 
-                                           filter(startsWith(type,'Unconscious')))
-num_ns_before_uc <- nrow(ns_results) - nrow(ns_results %>% 
-                                           filter(startsWith(type,'Unconscious')))
-
+# uncorrected - significant sign-consistency per category
 sig_nondir_cat <- ns_results %>%
   mutate(non_dir_effect = non_directional.p <= alpha) %>%
   group_by(type, non_dir_effect) %>%
   summarise(N = n()) %>%
   group_by(type) %>%
   summarise(perc_nondir_sig = 100 * (1 - first(N) / sum(N)))
+# FDR corrected - significant sign-consistency per category
+# analyze the remaining non-significant results
+ns_results <- all_results[all_results$directional_effect.p > alpha,] %>%
+  group_by(type) %>%
+  mutate(non_directional.p.corrected = p.adjust(non_directional.p,method = 'fdr'))
+corrected_sig_nondir_cat <- ns_results %>%
+  mutate(non_dir_effect = non_directional.p.corrected <= alpha) %>%
+  group_by(type, non_dir_effect) %>%
+  summarise(N = n()) %>%
+  group_by(type) %>%
+  summarise(perc_nondir_sig = 100 * (1 - first(N) / sum(N)))
+
+non_directional.p.corrected
 sig_nondir_all <- ns_results %>%
   mutate(non_dir_effect = non_directional.p <= alpha) %>%
   group_by(non_dir_effect) %>%
   summarise(N = n()) %>%
   summarise(perc_nondir_sig = 100 * (1 - first(N) / sum(N)))
+
 # within Cognitive Psychology
 cog_psy_analysis <- ns_results %>%
   filter(startsWith(type, 'Cognitive')) %>%
