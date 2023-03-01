@@ -3,74 +3,103 @@ rm(list = ls())
 library(weaknull)
 library(ggplot2)
 library(dplyr)
-library(tidyverse)
-library(gridExtra)
-library(gtable)
-library(grid)
-source('appendix\\generate_dataset.R')
-source('datasets_analysis\\quid.R')
-source('datasets_analysis\\pbt.R')
+library(ggtext)
+library(tidyr)
+apdx_fld <- 'appendix'
+source(paste(apdx_fld, 'appendix_utils.R', sep = .Platform$file.sep))
 
-# set power simulation parametres
-N_p <- 30
+## simulation
+results_cols <- c('QUID')
 N_t <- 100
-sigma_b = 30
-sigma_w_same = 50
-sigma_w_diff = sigma_w_same * 5
-max_seed <- 10
-seeds <- 1:max_seed
+sigma_w_equal = 1
+sigma_w_unequal = 1000
+sigma_w <- c(sigma_w_equal, sigma_w_unequal)
+mu <- 0
+max_seed <- 1000
 
-# initialize a results grid to store the power analysis results
-results_df <- data.frame(seed = rep(seeds,each = 2),
-                         variability = rep(c('same','diff'), length(seeds)),
-                         QUID = rep(-1, 2 * length(seeds)),
-                         PBT = rep(-1, 2 * length(seeds)),
-                         SC = rep(-1, 2 * length(seeds)))
+# set simulation parameters for the FAs demonstration
+N_p_FAs <- 100
+sigma_b_FAs = 0
+conf_FAs <- initialize_simulation(N_p_FAs, N_t, sigma_b_FAs, sigma_w, mu, 
+                                  max_seed, results_cols)
+# set simulation parameters for the sensitivity demonstration
+N_p_sensitivity <- 30
+sigma_b_sensitivity = 15
+conf_sensitivity <- initialize_simulation(N_p_sensitivity, N_t, 
+                                          sigma_b_sensitivity, sigma_w, mu, 
+                                          max_seed, results_cols)
 
-# a function that runs the individual-level test for effects used in PBT
-pbt_test_f <- function(data) {
-  conditions <- unique(data$iv)
-  t_res <- t.test(data[data$iv == conditions[2],]$dv,
-                  data[data$iv == conditions[1],]$dv)
-  return(t_res$p.value)
-}
-
-# the function generates datasets according to the parameters
-generate_data <- function(seed, offset_rt = 650) {
-  same_var_data <- generate_dataset(p_mean = 0, p_sd = sigma_b, N = N_p,
-                                trials_per_cnd = N_t, wSEsd = sigma_w_same, 
-                                seed = seed) %>%
-    mutate(dv = dv + offset_rt)
-  diff_var_data <- generate_dataset(p_mean = 0, p_sd = sigma_b, N = N_p,
-                                    trials_per_cnd = N_t, wSEsd = sigma_w_diff, 
-                                    seed = seed) %>%
-    mutate(dv = dv + offset_rt)
-
-  return(list(same = same_var_data, diff = diff_var_data))
-}
-
-for (seed in 1:max_seed) {
-  # generate datasets for the same an different variance conditions
-  res <- generate_data(seed)
+# define analysis function
+variability_analysis <- function(conf, params, df, seed) {
+  equal_var_value <- min(conf$params$sigma_w)
+  if(params$sigma_w != equal_var_value) {
+    equal_var_df <- generate_dataset(p_mean = 0, p_sd = params$sigma_b, 
+                                    N = params$N_p, trials_per_cnd = params$N_t, 
+                                    wSEsd = equal_var_value, 
+                                      seed = seed)
+      df[df$idv%in% seq(1,params$N_p -1), 'dv'] <- 
+        equal_var_df[equal_var_df$idv%in% seq(1, params$N_p -1), 'dv']
+  }
   # run all tests
-  QUID_same_var <- run_quid(res$same)
-  QUID_diff_var <- run_quid(res$diff)
-  PBT_same_var <- run_pbt(res$same, pbt_test_f)
-  PBT_diff_var <- run_pbt(res$diff, pbt_test_f)
-  SC_same_var <- test_sign_consistency(res$same, idv = 'idv', iv = 'iv', dv = 'dv')
-  SC_diff_var <- test_sign_consistency(res$diff, idv = 'idv', iv = 'iv', dv = 'dv')
-  # save the results
-  # save same variability results
-  results_df[seed * 2 - 1,] <- c(seed, 'Same', 1 / QUID_same_var$quid_bf, 
-                         PBT_same_var$low, SC_same_var$p)
-  # save different variability results
-  results_df[seed * 2,] <- c(seed, 'Different', 1 / QUID_diff_var$quid_bf,
-                         PBT_diff_var$low, SC_diff_var$p)
+  QUID <- run_quid(df)
+  return(c(1 / QUID$quid_bf))
 }
 
-
+# run the simulation
+results_df_FAs <- run_simulation(conf_FAs, variability_analysis)
+results_df_sensitivity <- run_simulation(conf_sensitivity, variability_analysis)
+results_df <- rbind(results_df_FAs, results_df_sensitivity)
 # save the results to file
-datetime <- paste(Sys.Date(),
-                  str_replace_all(format(Sys.time(), "%X"), pattern = ':',replacement = '_')
-                  , sep = '_')
-write.csv(results_df, file = paste0('appendix\\',datetime,'_QUID_simulation.csv'))
+save_results(results_df, 'Appendix_A')
+
+# analyze results
+alpha = .05
+bf_criteria <- 3
+bf_criteria_high <- bf_criteria
+bf_criteria_low <- 1/bf_criteria_high
+results_df <- results_df %>% 
+  mutate(Condition = factor(sigma_w),
+         Analysis = factor(sigma_b),
+         Result = as.numeric(QUID))
+# analyze the results (% of iterations with significant/substantial results)
+analysis_quid <- results_df %>%
+  group_by(Analysis, Condition) %>%
+  summarise(sig = ifelse(Result <= bf_criteria_low, 'H0',
+                                        ifelse(Result >= bf_criteria_high, 'H1',
+                                               'Inconclusive'))) %>%
+  group_by(Analysis, Condition,sig) %>%
+  summarise(sig_prop = 100 * n() / max_seed)
+
+# plot the results
+plot_BF_dists <- function(data, bf_criteria = 3) {
+  bf_criteria_high <- bf_criteria
+  bf_criteria_low <- 1/bf_criteria_high
+  
+  data %>%
+  ggplot(aes(x = log10(Result), fill = Condition)) +
+    geom_density(alpha = .5) +
+    xlab('log<sub>10</sub>(BF)<br><i>global null</i> ↓') +
+    geom_vline(xintercept = log10(c(bf_criteria_high, bf_criteria_low)), 
+               linetype='solid', linewidth = 1, color = '#E9CB9A') +
+    theme_classic() +
+    scale_fill_manual(labels = c(bquote("Equal "~sigma[w]), 
+                                 bquote("Unequal "~sigma[w])),
+                      values = c('#3246a8', '#eb2d5f')) +
+    theme(axis.title.x = element_markdown(size = 25),
+          axis.title.y = element_markdown(size = 25),
+          axis.text = element_text(size = 20),
+          legend.position = 'top',
+          legend.text = element_text(size = 26),
+          legend.title = element_text(size = 26))
+}
+
+plt_appendix_A_FAs <- 
+  plot_BF_dists(results_df %>% filter(sigma_b == sigma_b_FAs), bf_criteria)
+plt_appendix_A_sensitivity <-
+  plot_BF_dists(results_df %>% filter(sigma_b == sigma_b_sensitivity), bf_criteria)
+        
+plt_appendix_A_FAs
+plt_appendix_A_sensitivity
+
+save_plot(plt_appendix_A_FAs, fn = 'Appendix_A_FAs')
+save_plot(plt_appendix_A_sensitivity, fn = 'Appendix_A_sensitivity')

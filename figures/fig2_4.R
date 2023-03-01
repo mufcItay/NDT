@@ -1,14 +1,8 @@
-library(weaknull)
 library(ggplot2)
 library(dplyr)
-library(tidyverse)
+library(stringr)
 library(gridExtra)
-library(grDevices)
-library(gtable)
 library(ggtext)
-library(data.table)
-library(grid)
-library(scales)
 source('datasets_analysis\\definitions.R')
 
 # set alpha value
@@ -88,8 +82,8 @@ generate_quid_plot <- function(data, graphics_conf, criteria = 3, eps = 1/10^5) 
     xlab('Experiment') +
     ylab('log<sub>10</sub>(BF)<br><i>global null</i> ↓') +
     geom_hline(yintercept = 0, linetype='dotted', linewidth = 2) +
-    geom_hline(yintercept = log10(criteria), linetype='solid', linewidth = 1.5, color = graphics_conf$pale_color) +
-    geom_hline(yintercept = log10(1/criteria), linetype='solid', linewidth = 1.5, color = graphics_conf$pale_color) +
+    geom_hline(yintercept = c(log10(criteria),log10(1/criteria)), 
+               linetype='solid', linewidth = 1.5, color = graphics_conf$pale_color) +
     geom_point(size = 5.5, shape=21, 
                colour = 'black', stroke =2) +
     ggtitle('Qualitative Individual Differences (QUID)') +
@@ -280,10 +274,10 @@ plt_dir <- plt_dir + theme(axis.text.x = element_blank(),
                 axis.ticks.x = element_blank(),
                 axis.title.x = element_blank())
 
-# aggregate together the Bayesian tests resutlts (PBT & QUID)
+# aggregate together the Bayesian tests results (PBT & QUID)
 # ns directional
-ns_plt_pbt <- ns_plt_pbt + labs(tag = "a.") + theme(plot.tag = element_text(size = 20))
-ns_plt_quid <- ns_plt_quid + labs(tag = "b.")  + theme(plot.tag = element_text(size = 20))
+ns_plt_pbt <- ns_plt_pbt + labs(tag = "A") + theme(plot.tag = element_text(size = 30))
+ns_plt_quid <- ns_plt_quid + labs(tag = "B")  + theme(plot.tag = element_text(size = 30))
 
 ns_plt_bayes <- grid.arrange(arrangeGrob(ns_plt_pbt, nrow = 1, widths = c(1)),
                           arrangeGrob(ns_plt_quid, nrow = 1, 
@@ -298,7 +292,7 @@ effect_plt_bayes <- grid.arrange(arrangeGrob(effect_plt_pbt, nrow = 1, widths = 
                                          widths = c(effect_n_quid/n_effect + .025,1-effect_n_quid/n_effect - .025)))
 ggsave('figures\\effect_bayes_methods_res.svg', width=15, height=12,plot = effect_plt_bayes)
 
-# aggregate together the NHST tests resutlts (Sign-Consistency & Directional permutations)
+# aggregate together the NHST tests results (Sign-Consistency & Directional permutations)
 ggsave('figures\\ns_plt_sign_con__res.svg', width=15, height=6,plot = ns_plt_nondir)
 ggsave('figures\\effect_plt_sign_con__res.svg', width=15, height=6,plot = effect_plt_nondir)
 plt_nhst <- grid.arrange(plt_dir, plt_nondir, ncol = 1, heights = c(0.5, 1))
