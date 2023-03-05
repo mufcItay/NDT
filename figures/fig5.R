@@ -3,9 +3,10 @@ library(dplyr)
 library(ggpubr)
 library(patchwork)
 library(tidyr)
+library(scales)
 
-library(scales) # to access break formatting functions
-source('datasets_analysis//definitions.R')
+figures_fld <- 'figures'
+source(paste(figures_fld, 'plotting_utils.R', sep = .Platform$file.sep))
 
 alpha <- .05
 pal <-   c("#B25E9D", "#3ECFC9", "#F4B26A", "#EB5F4A")
@@ -16,8 +17,7 @@ scientific_10 <- function(x) {
 }
 
 # read the results of all tests
-results_folder <- 'results'
-results_fns <- list.files(results_folder, pattern = '.csv', full.names = TRUE) 
+results_fns <- list.files(results_fld, pattern = '.csv', full.names = TRUE) 
 read_res_df <- function(fn) {
   df <- read.csv(fn) %>%
     mutate(type = gsub(basename(fn), pattern="_Results.csv$", replacement="")) %>%
@@ -33,6 +33,11 @@ sum_N <- all_results %>%
   summarise(N = n())
 Nunique <- length(unique(unique(paste(all_results$exp, all_results$type, sep = '_'))))
 # summarise non-significant results
+# fitler ns resutls and add FDR corrected p values within analysis type
+ns_results <- all_results[all_results$directional_effect.p > alpha,] %>%
+  group_by(type) %>%
+  mutate(non_directional.p.corrected = p.adjust(non_directional.p,method = 'fdr'))
+# summarize ns results
 ns_sum_Ns <- ns_results %>%
   group_by(type) %>%
   summarise(N = n())
@@ -44,7 +49,6 @@ sig_nondir_cat <- ns_results %>%
   summarise(N = n()) %>%
   summarise(perc_nondir_sig = 100 * (1 - first(N) / sum(N)))
 
-# 
 # uncorrected - significant sign-consistency per category
 sig_nondir_cat <- ns_results %>%
   mutate(non_dir_effect = non_directional.p <= alpha) %>%
@@ -52,11 +56,7 @@ sig_nondir_cat <- ns_results %>%
   summarise(N = n()) %>%
   group_by(type) %>%
   summarise(perc_nondir_sig = 100 * (1 - first(N) / sum(N)))
-# FDR corrected - significant sign-consistency per category
-# analyze the remaining non-significant results
-ns_results <- all_results[all_results$directional_effect.p > alpha,] %>%
-  group_by(type) %>%
-  mutate(non_directional.p.corrected = p.adjust(non_directional.p,method = 'fdr'))
+
 corrected_sig_nondir_cat <- ns_results %>%
   mutate(non_dir_effect = non_directional.p.corrected <= alpha) %>%
   group_by(type, non_dir_effect) %>%
@@ -64,7 +64,6 @@ corrected_sig_nondir_cat <- ns_results %>%
   group_by(type) %>%
   summarise(perc_nondir_sig = 100 * (1 - first(N) / sum(N)))
 
-non_directional.p.corrected
 sig_nondir_all <- ns_results %>%
   mutate(non_dir_effect = non_directional.p <= alpha) %>%
   group_by(non_dir_effect) %>%
@@ -120,7 +119,7 @@ scatter_plt <- ns_results %>%
         axis.title.y = element_text(size=18),
         axis.text = element_text(size=18),
         legend.position = 'none')
-
+# plot density plot for each database (analysis type)
 density_nondir <- ns_results %>%
   mutate(non_directional.p = eps+non_directional.p*(1-eps),
          directional_effect.p = eps+directional_effect.p*(1-eps)) %>%
@@ -144,5 +143,5 @@ density_nondir <- ns_results %>%
 
 aggreagated_plt <-  density_nondir + scatter_plt +
   plot_layout(ncol = 1, nrow = 2, heights = c(.5,1))
-ggsave(paste('figures',paste0('figure4', '.svg'), sep = .Platform$file.sep),
+ggsave(paste(plots_fld,paste0('figure5', '.svg'), sep = .Platform$file.sep),
        plot = aggreagated_plt, width = 10, height = 10)

@@ -9,6 +9,7 @@ source('datasets_analysis\\definitions.R')
 #' @return the calculated AUC measure
 get_AUC <- function(mat, summary_f_args = list(iv = 'iv2', dv = 'dv')){
   mat <- as.data.frame(mat)
+  # missing data
   if(length(colnames(mat)) <2) {
     return(NA)
   }

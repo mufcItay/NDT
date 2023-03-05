@@ -53,7 +53,8 @@ Confidence_analysis_lbl <- 'cdb'
 Metacognitive_Sensitivity_analysis_lbl <- 'auc'
 Unconscious_Processing_analysis_lbl <- 'ucdb'
 Cognitive_Psychology_analysis_lbl <- 'cogdb'
-
+all_analysis_types <- c(Confidence_analysis_lbl, Metacognitive_Sensitivity_analysis_lbl,
+                        Unconscious_Processing_analysis_lbl, Cognitive_Psychology_analysis_lbl)
 #' init_analysis
 #' the function gets a string description of configurations and returns a
 #' configuration object, accordingly.

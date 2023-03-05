@@ -4,14 +4,17 @@ library(ggplot2)
 library(dplyr)
 library(gridExtra)
 library(grid)
-source('appendix\\generate_dataset.R')
+library(tidyr)
+
+figures_fld <- 'figures'
+source(paste(figures_fld, 'plotting_utils.R', sep = .Platform$file.sep))
 
 #' prepare-data
 #' A helper function that prepares data to be presented in the figure 
-#' @param data a dataframe of the shape: (#Trials X #Participants) X (id, condition,var)
-#' where 'id' is the identifier of participants, 'condition' is the condition identifier (we
+#' @param data a dataframe of the shape: (#Trials X #Participants) X (idv, iv,dv)
+#' where 'idv' is the identifier of participants, 'iv' is the condition identifier (we
 #' simulate two different conditions within each participant), 
-#' and 'var' is the dependent variable measured on each trial.   
+#' and 'dv' is the dependent variable measured on each trial.   
 #' @return a list with the following items:
 ##' \itemize{
 ##'  \item{"effects"}{a dataframe with summary statstics of the effect measure (incongrueny - congruent),
@@ -47,13 +50,13 @@ prepare_data <- function(data, ci_percentile = 5) {
   percentiles <- c(lowbnd, 0.5, highbnd)
   percentile_cols <- c('low', 'med', 'high') 
   data_ps <- data %>%
-    group_by(id,condition) %>%
+    group_by(idv,iv) %>%
     summarise(q = percentile_cols,
-              RT = quantile(var, percentiles)) %>%
+              RT = quantile(dv, percentiles)) %>%
     spread(q,RT)
-  # split to conditions and add subject id column
-  data_ps_cong <- data_ps %>% filter(condition == 0)
-  data_ps_incong <- data_ps %>% filter(condition == 1)
+  # split to conditions and add subject idv column
+  data_ps_cong <- data_ps %>% filter(iv == 0)
+  data_ps_incong <- data_ps %>% filter(iv == 1)
   data_ps_cong <- data_ps_cong[res_dir$effect_per_id$orgid, ]
   data_ps_cong$idv <- 1:nrow(res_dir$effect_per_id)
   data_ps_incong <- data_ps_incong[res_dir$effect_per_id$orgid, ]
@@ -64,14 +67,14 @@ prepare_data <- function(data, ci_percentile = 5) {
 
 #' generate_effects_plot
 #' A helper function that generates the directional effects per participant plot
-#' @param data - a dataframe of the shape (#Participants) X (id, effect, sc),
+#' @param data - a dataframe of the shape (#Participants) X (idv, effect, sc),
 #' where 'sc' is the sign-consistency score of each participant, and 'effect' is the directional
 #' effect of each participant
 #' @param graphics_conf a list with different graphics configurations to be used by
 #' the plotting helper functions
 #' @return the directional effects per participant plot
 generate_effects_plot <- function(data, graphics_conf) {
-  plt <- ggplot(data, aes(x = effect, y = id)) +
+  plt <- ggplot(data, aes(x = effect, y = idv)) +
     xlab('Effect') +
     ylab('Subject') +
     xlim(-50,50) +
@@ -97,7 +100,7 @@ generate_effects_plot <- function(data, graphics_conf) {
 #' A helper function that within participants ranges plot
 #' @param data_ps_cong a dataframe with the low, median and high percetiles of the 
 #' dependent measure of each participant for the congruent condition.
-#' The shape of the dataframe is (#Participants) X (id, low, med, high), where id indicates
+#' The shape of the dataframe is (#Participants) X (idv, low, med, high), where idv indicates
 #' the identifier of the participant, and 'low', 'med', and 'high' indicates the low, 50%
 #' and high percentiles of the depdent measure 
 #' @param data_ps_incong same as the 'data_ps_cong' dataframe, for the incongruent condition
@@ -106,17 +109,17 @@ generate_effects_plot <- function(data, graphics_conf) {
 #'
 #' @return the within participants ranges plot
 generate_ps_plot <- function(data_ps_cong, data_ps_incong, graphics_conf) {
-  plt <- ggplot(data_ps_cong, aes(y = id)) +
-    geom_segment(data = data_ps_incong, aes(x = low, xend = high, y = id + graphics_conf$margin_y_conds, yend = id + graphics_conf$margin_y_conds),
+  plt <- ggplot(data_ps_cong, aes(y = idv)) +
+    geom_segment(data = data_ps_incong, aes(x = low, xend = high, y = idv + graphics_conf$margin_y_conds, yend = idv + graphics_conf$margin_y_conds),
                  size = graphics_conf$size_seg, colour = graphics_conf$incong_color) +
-    geom_segment(data = data_ps_cong, aes(x = low, xend = high, y = id - graphics_conf$margin_y_conds, 
-                                          yend = id - graphics_conf$margin_y_conds), 
+    geom_segment(data = data_ps_cong, aes(x = low, xend = high, y = idv - graphics_conf$margin_y_conds, 
+                                          yend = idv - graphics_conf$margin_y_conds), 
                  size = graphics_conf$size_seg, colour = graphics_conf$cong_color) +
-    geom_segment(data = data_ps_incong, aes(x = med - graphics_conf$legnth_med, xend = med + graphics_conf$legnth_med,  y = id + graphics_conf$margin_y_conds, 
-                                            yend = id + graphics_conf$margin_y_conds), 
+    geom_segment(data = data_ps_incong, aes(x = med - graphics_conf$legnth_med, xend = med + graphics_conf$legnth_med,  y = idv + graphics_conf$margin_y_conds, 
+                                            yend = idv + graphics_conf$margin_y_conds), 
                  size = graphics_conf$size_seg, colour = graphics_conf$med_color) +
-    geom_segment(data = data_ps_cong, aes(x = med - graphics_conf$legnth_med, xend = med + graphics_conf$legnth_med, y = id - graphics_conf$margin_y_conds, 
-                                          yend = id - graphics_conf$margin_y_conds), 
+    geom_segment(data = data_ps_cong, aes(x = med - graphics_conf$legnth_med, xend = med + graphics_conf$legnth_med, y = idv - graphics_conf$margin_y_conds, 
+                                          yend = idv - graphics_conf$margin_y_conds), 
                  size = graphics_conf$size_seg, colour = graphics_conf$med_color) +
     geom_hline(yintercept = data_ps_cong$idv + graphics_conf$margin_y_subj, 
                size = graphics_conf$size_seg/2, linetype='dotted', 
@@ -140,10 +143,10 @@ generate_ps_plot <- function(data_ps_cong, data_ps_incong, graphics_conf) {
 
 #' generate_agg_plot
 #' Generates the aggregated figure of the directional effects and within participant percentiles
-#' @param data a dataframe of the shape: (#Trials X #Participants) X (id, condition,var)
-#' where 'id' is the identifier of participants, 'condition' is the condition identifier (we
+#' @param data a dataframe of the shape: (#Trials X #Participants) X (idv, iv,dv)
+#' where 'idv' is the identifier of participants, 'iv' is the condition identifier (we
 #' simulate two different conditions within each participant), 
-#' and 'var' is the dependent variable measured on each trial.   
+#' and 'dv' is the dependent variable measured on each trial.   
 #' @param graphics_conf a list with different graphics configurations to be used by
 #' @param rng_ratio if has a value different from -1 (the default value), sets the width
 #' of the right-plot in the aggregated figure according to the assigned value (where the
@@ -166,7 +169,7 @@ generate_agg_plot <- function(data, graphics_conf, fn, rng_ratio = -1) {
   }
   plt <- grid.arrange(p_left ,p_right, widths = c(1, rng_ratio), ncol = 2,
                left = textGrob("Subject", rot = 90, vjust = 1, gp = gpar(fontsize = graphics_conf$x_title_size)))
-  ggsave(paste('figures',paste0(fn, '.png'), sep = .Platform$file.sep), 
+  ggsave(paste(plots_fld,paste0(fn, '.png'), sep = .Platform$file.sep), 
          width=10, height=5,plot = plt)
   
   return(rng_ratio)
@@ -179,25 +182,25 @@ graphics_conf <- list(size_seg = 2, color_spreading_lines = '#71E9CC',
                       vline_size = 1, x_title_size = 22, x_text_size = 20)
 offset_rt <- 650
 # generate weaknull plot
-wn_data <- generate_dataset(p_mean = 0, p_sd = 15, N = 15, trials_per_cnd = 100, wSEsd = 30)
-wn_data$dv <- wn_data$dv + offset_rt
-ratio <- generate_agg_plot(wn_data, graphics_conf, 'wn_plt')
+nde_data <- generate_dataset(p_mean = 0, p_sd = 15, N = 15, trials_per_cnd = 100, wSEsd = 30)
+nde_data$dv <- nde_data$dv + offset_rt
+ratio <- generate_agg_plot(nde_data, graphics_conf, 'nde_plt')
 sn_data <- generate_dataset(p_mean = 0, p_sd = 0, N = 15, trials_per_cnd = 100, wSEsd = 100)
 sn_data$dv <- sn_data$dv + offset_rt
 generate_agg_plot(sn_data, graphics_conf, 'sn_plt', ratio)
 
 # common analysis, two-sided t-test
-wn_t_test <- wn_data %>%
-  group_by(id, condition) %>%
-  summarise(mrt = mean(var)) %>%
-  group_by(id) %>%
+nde_t_test <- nde_data %>%
+  group_by(idv, iv) %>%
+  summarise(mrt = mean(dv)) %>%
+  group_by(idv) %>%
   summarise(effect = diff(mrt)) %>%
   pull(effect) %>%
   t.test()
 sn_t_test <- sn_data %>%
-  group_by(id, condition) %>%
-  summarise(mrt = mean(var)) %>%
-  group_by(id) %>%
+  group_by(idv, iv) %>%
+  summarise(mrt = mean(dv)) %>%
+  group_by(idv) %>%
   summarise(effect = diff(mrt)) %>%
   pull(effect) %>%
   t.test()
@@ -205,15 +208,10 @@ sn_t_test <- sn_data %>%
 # Bayesian analysis
 # QUID
 source('datasets_analysis\\quid.R')
-renamed_wn_data <- wn_data %>%
-  rename(idv = id, iv = condition, dv = var)
-renamed_sn_data <- sn_data %>%
-  rename(idv = id, iv = condition, dv = var)
-
-run_quid(renamed_sn_data)
-wn_quid_res <- run_quid(renamed_wn_data)
-sn_quid_res <- run_quid(renamed_sn_data)
-wn_bf <- 1/ wn_quid_res$quid_bf
+run_quid(sn_data)
+nde_quid_res <- run_quid(nde_data)
+sn_quid_res <- run_quid(sn_data)
+nde_bf <- 1/ nde_quid_res$quid_bf
 sn_bf <- 1/ sn_quid_res$quid_bf
 
 #PBT
@@ -224,31 +222,32 @@ t_f <- function(data) {
                   data[data$iv == conditions[1],]$dv)
   return(t_res$p.value)
 }
-wn_pbt_res <- run_pbt(renamed_wn_data, test_function = t_f)
-sn_pbt_res <- run_pbt(renamed_sn_data, test_function = t_f)
+nde_pbt_res <- run_pbt(nde_data, test_function = t_f)
+sn_pbt_res <- run_pbt(sn_data, test_function = t_f)
 
 
 ## plot Kruschke style plots for the figure
-source('figures\\util_plot_dist.R')
 nde_b <- dists$normal
 nde_w <- dists$normal
 nde_w$ddist_params$sd = nde_w$ddist_params$sd / 2 
 save_png <- function(fn, dist, labels) {
-  fn <- paste('figures', paste0(fn, '.png'), sep = .Platform$file.sep)
+  fn <- paste(plots_fld, paste0(fn, '.png'), sep = .Platform$file.sep)
   png(fn, width=165, height=123, bg="transparent", res=72, )
   plot_dist(dist, labels = labels, plot_dist_name = F)
   dev.off()
 }
 
-# upper panel - nde
+# upper panel - nde (non-directional effect)
 save_png('nde_b', nde_b, c(mean = expression(N (0, sigma[b]))))
 save_png('nde_w', nde_w, c(mean = expression(N (0, sigma[w]))))
 
+# left panel 
 sn_b <- dists$normal
+# set sd to a very low value (ideally zero would be used here)
 sn_b$ddist_params$sd = 0.0000001 
 sn_b$plot_type <- 'line'
 sn_w <- dists$normal
 sn_w$ddist_params$sd = sn_w$ddist_params$sd * 2 
-# Lower panel - sn
+# lower panel - sn (strong/global null)
 save_png('sn_b', sn_b, c(mean = expression(delta(0))))
 save_png('sn_w', sn_w, c(mean = expression(N (0, sigma[w]))))

@@ -28,7 +28,7 @@ run_pbt <- function(data, test_function, alpha = .05, hdi_width = .95) {
 }
 
 #################################################################
-# Copied from Ince et al. 2021 repository (eLife paper):        #
+# Downloaded from Ince et al. 2021 repository (eLife):          #
 # https://github.com/robince/bayesian-prevalence/tree/master/R  #
 #################################################################
 

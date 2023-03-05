@@ -3,7 +3,8 @@ library(MCMCpack)
 source('datasets_analysis\\definitions.R')
 # source quid function (Rouder & Haaf, 2021; 
 # Are There Reliable Qualitative Individual Difference in Cognition?)
-source("https://bit.ly/2ZqGOik")
+# downloaded from https://bit.ly/2ZqGOik:
+source("datasets_analysis\\quid_imp.R")
 
 #' run_quid
 #' The function runs the QUID solution on the given dataset.

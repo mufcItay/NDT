@@ -1,11 +1,11 @@
-rm(list = ls())
-
 library(dplyr)
 library(ggplot2)
 library(stringr)
 library(weaknull)
 library(tidyr)
 library(weaknull)
+
+# source the utilities script
 apdx_fld <- 'appendix'
 source(paste(apdx_fld, 'appendix_utils.R', sep = .Platform$file.sep))
 
@@ -15,31 +15,37 @@ N_t <- c(20, 100, 500)
 sigma_b = c(2)
 sigma_w <- 10
 mu = c(0, 1)
+# defines the number of simulations
 max_seed <- 10^4
 seeds <- 1:max_seed
 results_cols <- c(paste('sc', c('p','stat'),sep = '_'),
                   paste('pbt', c('low_hdi95', 'high_hdi95', 'MAP'),sep = '_'))
 conf <- initialize_simulation(N_p, N_t, sigma_b, sigma_w, mu, max_seed, 
                               results_cols = results_cols)
-
+# define the power analysis function
 power_analysis <- function(conf, params, df, seed) {
-  # run all tests
+  # run the sign-consistency and PBT tests
   res_sc <- test_sign_consistency(df, idv = 'idv', iv = 'iv', dv = 'dv')
   res_pbt <- run_pbt(df, pbt_test_f)
+  # return the statistics of interest to store in the results data frame 
   return(c(res_sc[c('p', 'statistic')], 
     res_pbt[c('low', 'high', 'MAP')]))
 }
-
+# get the power analysis results
 results_df <- run_simulation(conf, power_analysis)
 
-# create a summary function for the results
+# create a summary data frame for the results:
+# count significant sign-consistency and HDI excludes zero (for PBT)
 alpha <- .05
+# data frame structure:
+# (condition) X (sign-consistency significance,  PBT's HDI exceeds zero)
 results_summary <- results_df %>%
   mutate(SC = sc_p <= alpha,
          PBT = pbt_low_hdi95 > 0) %>%
   group_by(mu, N_p, N_t) %>%
   summarise_all(mean) %>%
   gather(Test, Power, SC:PBT)
+# save the summary of the results to file
 save_results(results_summary, 'Appendix_B')
 
 # plot the results
@@ -71,5 +77,5 @@ plt_appendix_B <- results_summary %>%
         strip.placement = "outside") +
   guides(fill = guide_colourbar(barwidth = 20,
                                 title="Power (%)"))
-
+# save the plot
 save_plot(plt_appendix_B, fn = 'Appendix_B')

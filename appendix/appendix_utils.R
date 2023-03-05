@@ -9,6 +9,7 @@ apdx_fld <- 'appendix'
 analysis_fld <- 'datasets_analysis'
 results_fld <- paste(apdx_fld, 'results', sep = .Platform$file.sep)
 
+source(paste(apdx_fld, 'generate_dataset.R', sep = .Platform$file.sep))
 source(paste(analysis_fld, 'quid.R', sep = .Platform$file.sep))
 source(paste(analysis_fld, 'pbt.R', sep = .Platform$file.sep))
 # create the results folder if it does not exist
@@ -54,46 +55,6 @@ initialize_simulation <- function(N_p, N_t, sigma_b, sigma_w, mu, max_seed,
   return(list(params = params, results = results, results_cols = results_cols))
 }
 
-#' Create Sample Data
-#' @description The function generated mock data for tests and examples according to the arguments
-#' @param p_mean the effect's population mean
-#' @param p_sd the standard deviation of the population's effect
-#' @param seed - a seed to use when generating the resulting data frame
-#' @param N - the number of simulated participants
-#' @param trials_per_cnd - the number of simulated trials per condition
-#' @param wSEsd - the standard deviation of the dependent measure (within subject error term)
-#'
-#' @return a data frame with three columns: id (participant id), 'iv' (condition label), and 'dv' (the dependent variable)
-generate_dataset <- function(p_mean, p_sd, seed = 1, N = 30, trials_per_cnd = 100, wSEsd = 2) {
-  set.seed(seed)
-  # 0 = faster/smaller condition (e.g., 'congruent'), 1 = slower/larger condition (e.g., 'incongruent'),
-  conditionLabels <- c(0,1)
-  # define the number of trials across all conditions
-  trialsN <- trials_per_cnd * length(conditionLabels)
-  
-  # define the baseline dependent measure statistical features
-  effect_baseline <- 0
-  within_subj_effect_sd <- wSEsd
-  
-  # define the effect statistical features
-  population_sd = p_sd
-  population_mean = p_mean
-  
-  # create an id column for the samples data
-  idv <- rep(1:N, each = trialsN)
-  # create a independent variable column
-  iv <- rep(rep(conditionLabels, each = trials_per_cnd), N)
-  
-  # sample effects for each subject
-  subj_true_effect <- stats::rnorm(N,population_mean,population_sd)
-  # sample effects for each subject and trial
-  subj_true_effect_per_trial <- rep(subj_true_effect, each = trialsN)
-  # set the dependent variable columns according to baseine, the true effect, and the indepdent variable
-  dv <- stats::rnorm(length(idv), effect_baseline, within_subj_effect_sd) + iv * subj_true_effect_per_trial
-  # create a dataframe based on the three columns generated above
-  sampled_data <- data.frame(idv, iv, dv)
-  return (sampled_data)
-}
 
 # the functions applies the 'inner_sim_f' function to the generated data
 # according to each seed
@@ -137,7 +98,7 @@ save_results <- function(results, postfix) {
   datetime <- paste(Sys.Date(), str_replace_all(format(Sys.time(), "%X"), 
                                                 pattern = ':',replacement = '_'), 
                     sep = '_')
-  write.csv(results, file = paste(apdx_fld, paste0(datetime,postfix,'.csv'),
+  write.csv(results, file = paste(results_fld, paste0(datetime,postfix,'.csv'),
                                   sep = .Platform$file.sep))
 }
 

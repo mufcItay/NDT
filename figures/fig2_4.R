@@ -3,12 +3,13 @@ library(dplyr)
 library(stringr)
 library(gridExtra)
 library(ggtext)
-source('datasets_analysis\\definitions.R')
+
+figures_fld <- 'figures'
+source(paste(figures_fld, 'plotting_utils.R', sep = .Platform$file.sep))
 
 # set alpha value
 alpha <- .05
 invalid_quid_res <- INVALID_VALUE_CODE
-
 
 #' generate_NDT_plot
 #' The function generates the sign-consistency (non-directional test) results sub-plot
@@ -161,7 +162,7 @@ graphics_conf <- list(title_size = 40, size_seg = 2, color_spreading_lines = '#7
                       vline_size = 1, x_title_size = 22, x_text_size = 16)
 # read the results of the UC database 
 res_summary_fn <- 'Unconscious Processing_Results.csv'
-results <- read.csv(paste('results', res_summary_fn, sep=.Platform$file.sep))
+results <- read.csv(paste(results_fld, res_summary_fn, sep=.Platform$file.sep))
 results$long_exp_name <- results$exp
 short_exp_name <- sapply(unique(results$exp), get_initials)
 exp_reps <- results %>% group_by(exp) %>% summarise(n=n())
@@ -282,7 +283,8 @@ ns_plt_quid <- ns_plt_quid + labs(tag = "B")  + theme(plot.tag = element_text(si
 ns_plt_bayes <- grid.arrange(arrangeGrob(ns_plt_pbt, nrow = 1, widths = c(1)),
                           arrangeGrob(ns_plt_quid, nrow = 1, 
                                       widths = c(ns_n_quid/n_ns + .025,1-ns_n_quid/n_ns - .025)))
-ggsave('figures\\ns_bayes_methods_res.svg', width=15, height=12,plot = ns_plt_bayes)
+ggsave(paste(plots_fld, 'ns_bayes_methods_res.svg', sep = .Platform$file.sep),
+       width=15, height=12,plot = ns_plt_bayes)
 # directional effect
 effect_plt_pbt <- effect_plt_pbt + labs(tag = "a.") + theme(plot.tag = element_text(size = 20))
 effect_plt_quid <- effect_plt_quid + labs(tag = "b.")  + theme(plot.tag = element_text(size = 20))
@@ -290,10 +292,14 @@ effect_plt_quid <- effect_plt_quid + labs(tag = "b.")  + theme(plot.tag = elemen
 effect_plt_bayes <- grid.arrange(arrangeGrob(effect_plt_pbt, nrow = 1, widths = c(1)),
                              arrangeGrob(effect_plt_quid, nrow = 1, 
                                          widths = c(effect_n_quid/n_effect + .025,1-effect_n_quid/n_effect - .025)))
-ggsave('figures\\effect_bayes_methods_res.svg', width=15, height=12,plot = effect_plt_bayes)
+ggsave(paste(plots_fld, 'effect_bayes_methods_res.svg', sep = .Platform$file.sep),
+       width=15, height=12,plot = effect_plt_bayes)
 
 # aggregate together the NHST tests results (Sign-Consistency & Directional permutations)
-ggsave('figures\\ns_plt_sign_con__res.svg', width=15, height=6,plot = ns_plt_nondir)
-ggsave('figures\\effect_plt_sign_con__res.svg', width=15, height=6,plot = effect_plt_nondir)
+ggsave(paste(plots_fld, 'ns_plt_sign_con__res.svg', sep = .Platform$file.sep),
+       width=15, height=6,plot = ns_plt_nondir)
+ggsave(paste(plots_fld, 'effect_plt_sign_con__res.svg', sep = .Platform$file.sep),
+       width=15, height=6,plot = effect_plt_nondir)
 plt_nhst <- grid.arrange(plt_dir, plt_nondir, ncol = 1, heights = c(0.5, 1))
-ggsave('figures\\plt_nhst_methods_res.svg', width=15, height=12,plot = plt_nhst)
+ggsave(paste(plots_fld, 'plt_nhst_methods_res.svg', sep = .Platform$file.sep),
+       width=15, height=12,plot = plt_nhst)
