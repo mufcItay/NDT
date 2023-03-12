@@ -26,7 +26,7 @@ data <- data.long %>%
 
 write.csv(data, 'Mirman_Magnuson_2008.csv')
 
-library(weaknull)
+library(signcon)
 p <-test_directional_effect(data, idv = 'idv', dv = 'dv', iv = 'iv')$p
 2 * min(p,1-p)
 test_sign_consistency(data, idv = 'idv', dv = 'dv', iv = 'iv')$p

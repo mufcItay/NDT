@@ -1,6 +1,6 @@
 library(dplyr)
-
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+
 # read the dataset
 data <- read.csv('jaSifiData.csv')
 subjs <- unique(data$subject)
@@ -21,50 +21,20 @@ exc_participants <- data %>%
 data <- data %>%
   filter(rt >= .1, rt <= 3, !idv %in% exc_participants, soc_condition != 'C')
 
+# get response data, preregistered analysis
 data_response <- data %>%
   filter(soc_condition != 'C') %>%
   rename(dv =  response, iv2 = beeps, iv = soc_condition) %>%
   mutate(exp = paste('Battich_etal_2021', 'resp', target, sep = '_')) %>%
   dplyr::select(idv,iv,iv2,dv,exp)
 
+# get RT data, exploratory analysis
 data_rt <- data %>%
   filter(soc_condition != 'C') %>%
   rename(dv =  rt, iv2 = beeps, iv = soc_condition) %>%
   mutate(exp = paste('Battich_etal_2021', 'rt',target, sep = '_')) %>%
   dplyr::select(idv,iv,iv2,dv,exp)
 
+# bind RT and response data together
 data_all <- rbind(data_rt, data_response)
 write.csv(data_all, 'Battich_etal_2021.csv')
-
-library(weaknull)
-get_effect_f <- function(mat, args = list(summary_f = mean, iv = 'iv2', dv = 'dv')) {
-  mat <- as.data.frame(mat)
-  mat$dv <- as.numeric(mat$dv)
-  values <- mat %>% pull(dplyr::sym(args$iv))
-  conds <- sort(unique(values))
-  res <- args$summary_f(mat[values == conds[2],]$dv) - 
-    args$summary_f(mat[values == conds[1],]$dv)
-  return(res)
-}
-
-test_directional_effect(data_all %>% filter(exp == 'Battich_etal_2021_resp_1'), 
-                        idv = 'idv', dv = c('iv2','dv'), iv = 'iv', 
-                        summary_function = get_effect_f)
-test_sign_consistency(data_all %>% filter(exp == 'Battich_etal_2021_resp_1'), 
-                      idv = 'idv', dv = c('iv2','dv'), iv = 'iv', 
-                        summary_function = get_effect_f)
-
-# exclude participants with zero variance in all conditions
-# exclude dv from grouping variables before zero variability exclusions
-exc_zero_var <- data_all %>%
-  mutate(unique_id = factor(paste(exp, idv, sep = '_'))) %>%
-  group_by_at(.vars = vars(unique_id, iv2)) %>% 
-  summarise(var = var(dv)) %>% 
-  group_by_at(.vars = vars(unique_id)) %>% 
-  summarise(var = sum(var)) %>% 
-  filter(var == 0) %>% 
-  pull(unique_id)
-
-test_sign_consistency(data_all %>% filter(exp == 'Battich_etal_2021_resp_1', idv != 20), 
-                      idv = 'idv', dv = c('iv2','dv'), iv = 'iv', 
-                      summary_function = get_effect_f, max_invalid_reps = 3)

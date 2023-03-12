@@ -56,7 +56,7 @@ data_all <- do.call(rbind,lapply(list(data_1a,data_1b, data_1c, data_1d,
                                  function(d) d %>% dplyr::select(idv, iv, dv, exp)))
 write.csv(data_all, 'Adam_et_al_2021.csv')
 
-library(weaknull)
+library(signcon)
 res <- data_all %>%
   group_by(exp) %>%
   group_modify(~data.frame(dt = 

@@ -1,4 +1,4 @@
-library(weaknull)
+library(signcon)
 library(dplyr)
 library(tidyr)
 
@@ -99,7 +99,7 @@ v2 <- exp1_v2 %>%
   group_modify(~data.frame(d=get_participant_SDT_d(.x,args = list(iv = 'iv2', dv = 'dv'))/2^.5))
 
 
-library(weaknull)
+library(signcon)
 svp_args <- list(iv = 'iv2', dv = 'dv')
 summary_f <- function(mat) {
   return (get_participant_SDT_d(mat, svp_args))

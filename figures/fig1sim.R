@@ -1,5 +1,5 @@
 rm(list = ls())
-library(weaknull)
+library(signcon)
 library(ggplot2)
 library(dplyr)
 library(gridExtra)
@@ -49,10 +49,15 @@ prepare_data <- function(data, ci_percentile = 5) {
   highbnd <- 1- lowbnd
   percentiles <- c(lowbnd, 0.5, highbnd)
   percentile_cols <- c('low', 'med', 'high') 
-  data_ps <- data %>%
+  # data_ps <- data %>%
+  #   group_by(idv,iv) %>%
+  #   summarise(q = percentile_cols,
+  #             RT = quantile(dv, percentiles)) %>%
+  #   spread(q,RT)
+  data_ps <-   data %>%
     group_by(idv,iv) %>%
     summarise(q = percentile_cols,
-              RT = quantile(dv, percentiles)) %>%
+              RT = mean(dv) + sd(dv)/sqrt(n()) * qnorm(p = c(.025,0.5,.975), 0,1))%>%
     spread(q,RT)
   # split to conditions and add subject idv column
   data_ps_cong <- data_ps %>% filter(iv == 0)
@@ -127,7 +132,7 @@ generate_ps_plot <- function(data_ps_cong, data_ps_incong, graphics_conf) {
     geom_vline(xintercept = mean(data_ps_cong$med),  size = graphics_conf$vline_size) +
     xlab('RT') +
     ylab('Subject') +
-    xlim(300, 1000) +
+    xlim(600, 700) +
     theme_classic() +
     theme(legend.position = 'none',
           axis.text = element_text(size = graphics_conf$x_text_size),
@@ -181,7 +186,7 @@ graphics_conf <- list(size_seg = 2, color_spreading_lines = '#71E9CC',
                       incong_color = 'black', cong_color = 'red', med_color = 'gray',
                       vline_size = 1, x_title_size = 22, x_text_size = 20)
 offset_rt <- 650
-# generate weaknull plot
+# generate nde plot
 nde_data <- generate_dataset(p_mean = 0, p_sd = 15, N = 15, trials_per_cnd = 100, wSEsd = 30)
 nde_data$dv <- nde_data$dv + offset_rt
 ratio <- generate_agg_plot(nde_data, graphics_conf, 'nde_plt')

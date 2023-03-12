@@ -99,7 +99,7 @@ data <- firstfixOnly %>%
 
 write.csv(data, 'Forti_Humphreys_2008.csv')
 
-library(weaknull)
+library(signcon)
 get_effect_f <- function(mat, args = list(summary_f = mean, iv = 'iv2', dv = 'dv')) {
   mat <- as.data.frame(mat)
   mat$dv <- as.numeric(mat$dv)

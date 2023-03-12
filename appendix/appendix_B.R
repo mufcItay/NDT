@@ -1,9 +1,8 @@
 library(dplyr)
 library(ggplot2)
 library(stringr)
-library(weaknull)
 library(tidyr)
-library(weaknull)
+library(signcon)
 
 # source the utilities script
 apdx_fld <- 'appendix'

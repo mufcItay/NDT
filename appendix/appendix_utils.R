@@ -1,4 +1,4 @@
-library(weaknull)
+library(signcon)
 library(ggplot2)
 library(dplyr)
 library(foreach)
@@ -70,7 +70,7 @@ run_simulation <- function(conf, inner_sim_f, cluster = NULL) {
   for (param_ind in 1:n_sim_conditions) { 
     # iterate over repetitions within each parameter combination
     res = foreach (seed = seeds, .combine = 'c',
-                   .packages = c("dplyr", "weaknull", "nleqslv")) %dopar% {
+                   .packages = c("dplyr", "signcon", "nleqslv")) %dopar% {
                      set.seed(seed)
                      params <- conf$params[param_ind,]
                      # create the datasets according to parameters

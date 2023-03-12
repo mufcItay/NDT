@@ -57,7 +57,9 @@ generate_nhst_plot <- function(data, graphics_conf, alpha = .05, is_sc = TRUE,
     theme(legend.position = 'none',
           plot.title = element_text(size = graphics_conf$title_size, hjust = .5),
           axis.text = element_text(size = graphics_conf$x_text_size),
+          axis.text.x = element_text(size = graphics_conf$x_text_size, vjust = -.5),
           axis.title = element_text(size = graphics_conf$x_title_size),
+          axis.title.x = element_text(size = graphics_conf$x_title_size, vjust = -.5),
           axis.title.y = element_text(margin = margin(t = 0, r = 5, b = 0, l = 0)))
   
   return (plt)
@@ -96,7 +98,9 @@ generate_quid_plot <- function(data, graphics_conf, criteria = 3, eps = 1/10^5) 
     theme(legend.position = 'none',
           plot.title = element_text(size = graphics_conf$title_size, hjust = .5),
           axis.text = element_text(size = graphics_conf$x_text_size),
+          axis.text.x = element_text(size = graphics_conf$x_text_size, vjust = -.5),
           axis.title = element_text(size = graphics_conf$x_title_size),
+          axis.title.x = element_text(size = graphics_conf$x_title_size, vjust = -.5),
           axis.title.y = element_markdown(margin = margin(t = 0, r = 5, b = 0, l = 0))) +
     ylim(min(c(data$log_bf, log10(1/criteria))) - .1,
          max(c(data$log_bf, log10(criteria))) + .1)
@@ -140,10 +144,13 @@ generate_pbt_plot <- function(data, graphics_conf, quid_n = invalid_quid_res) {
     theme(legend.position = 'none',
           plot.title = element_text(size = graphics_conf$title_size, hjust = .5),
           axis.text = element_text(size = graphics_conf$x_text_size),
+          axis.text.x = element_text(size = graphics_conf$x_text_size, vjust = -.5),
           axis.title = element_text(size = graphics_conf$x_title_size),
+          axis.title.x = element_text(size = graphics_conf$x_title_size, vjust = -.5),
           axis.title.y = element_text(margin = margin(t = 0, r = 17, b = 0, l = 0)),
           ) +
-  ylim(0, plyr::round_any(max(data$pbt.high) * 100, accuracy = 0.1, f = ceiling))
+    scale_x_discrete(expand=c(0.01, 0))
+    ylim(0, plyr::round_any(max(data$pbt.high) * 100, accuracy = 0.1, f = ceiling))
   
   return (plt)
 }
@@ -155,11 +162,11 @@ get_initials <- function(name, nchar=1, sep = '_', co_sep = '&') {
 } 
 
 # configure the graphics of the figure
-graphics_conf <- list(title_size = 40, size_seg = 2, color_spreading_lines = '#71E9CC',
+graphics_conf <- list(title_size = 32, size_seg = 2, color_spreading_lines = '#71E9CC',
                       margin_y_subj = 0.5, margin_y_conds = 0.125, legnth_med = 2,
                       ns_color = 'white', significant_color = 'red', 
                       med_color = 'gray', pale_color = "#E9CB9A", split_color = 'black',
-                      vline_size = 1, x_title_size = 22, x_text_size = 16)
+                      vline_size = 1, x_title_size = 22, x_text_size = 17)
 # read the results of the UC database 
 res_summary_fn <- 'Unconscious Processing_Results.csv'
 results <- read.csv(paste(results_fld, res_summary_fn, sep=.Platform$file.sep))
