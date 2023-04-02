@@ -57,7 +57,6 @@ get_input_df <- function(analysis_conf) {
 #' and analyze the relevant datasets according to all relevant tests
 run_analysis <-function(analysis_conf) {
   dfs <- get_input_df(analysis_conf)
-  browser()
   analysis_fs <- analysis_conf@sum_fs(analysis_conf, unique(dfs$exp))
   res <- dfs %>%
     group_by(exp) %>%
