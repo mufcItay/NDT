@@ -6,7 +6,8 @@ apdx_fld <- 'appendix'
 source(paste(apdx_fld, 'appendix_utils.R', sep = .Platform$file.sep))
 
 ## define the common simulation parameters
-results_cols <- c('QUID')
+results_cols <- c('QUID', 'OANOVA')
+# number of trials
 N_t <- 100
 # we assume that the equal variance condition sigma_w is lower than the sigma_w
 # used in the unequal variability condition
@@ -45,7 +46,8 @@ variability_analysis <- function(conf, params, df, seed) {
   }
   # run all tests
   QUID <- run_quid(df)
-  return(c(1 / QUID$quid_bf))
+  OANOVA <- run_oanova_test(df)
+  return(c(1 / QUID$quid_bf, OANOVA$p))
 }
 
 # run both simulations
@@ -54,7 +56,7 @@ results_df_sensitivity <- run_simulation(conf_sensitivity, variability_analysis)
 # aggregate simulations results to a single data frame
 results_df <- rbind(results_df_FAs, results_df_sensitivity)
 # save the results to file
-save_results(results_df, 'Appendix_A')
+save_results(results_df, 'Appendix_A_QUID_OANOVA')
 
 # analyze results - we use the bf_criteria to categorize iterations with
 # moderate evidence for and against H0 (global null)
@@ -67,15 +69,25 @@ bf_criteria_low <- 1/bf_criteria_high
 results_df <- results_df %>% 
   mutate(Condition = factor(sigma_w),
          Analysis = factor(sigma_b),
-         Result = as.numeric(QUID))
+         Result_QUID = as.numeric(QUID),
+         Result_OANOVA = as.numeric(OANOVA))
 
-# analyze the results (% of iterations with moderate evidence resultsin 
+# analyze QUID's results (% of iterations with moderate evidence in 
 # each analysis X condition combination)
 analysis_quid <- results_df %>%
   group_by(Analysis, Condition) %>%
-  summarise(sig = ifelse(Result <= bf_criteria_low, 'H0',
-                                        ifelse(Result >= bf_criteria_high, 'H1',
+  summarise(sig_QUID = ifelse(Result_QUID <= bf_criteria_low, 'H0',
+                                        ifelse(Result_QUID >= bf_criteria_high, 'H1',
                                                'Inconclusive'))) %>%
-  group_by(Analysis, Condition,sig) %>%
+  group_by(Analysis, Condition,sig_QUID) %>%
   summarise(sig_prop = 100 * n() / max_seed)
 analysis_quid
+
+# analyze the OANOVA test's results (% of iterations with significant effects in 
+# each analysis X condition combination)
+analysis_OANOVA <- results_df %>%
+  group_by(Analysis, Condition) %>%
+  summarise(sig_OANOVA = Result_OANOVA <= alpha) %>%
+  group_by(Analysis, Condition,sig_OANOVA) %>%
+  summarise(sig_prop = 100 * n() / max_seed)
+analysis_OANOVA

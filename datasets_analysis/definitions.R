@@ -72,7 +72,7 @@ init_analysis <- function(type) {
     # create an instance of the analysis configuration for the confidence DB
     conf <- new(analysisConfCName, 'datasets\\cdb\\CONFDB\\', 'results\\Confidence_DB.csv', 
                 'results\\Confidence_Results.csv', preprocess_dfs_cdb, mean,
-                sum_fs = get_sum_fs_confidence, analyze_exps_f = run_nhst_analyses)
+                sum_fs = get_sum_fs_confidence, analyze_exps_f = run_signcon_analyses)
   }
   
   
@@ -83,7 +83,7 @@ init_analysis <- function(type) {
     conf <- new(analysisConfCName, 'datasets\\cdb\\AUCDB\\',
                 'results\\AUC_DB.csv', 'results\\Metacognitive Sensitivity_Results.csv',
                 preprocess_dfs_AUC, get_AUC, sum_fs = get_sum_fs_AUC, 
-                analyze_exps_f = run_nhst_analyses)
+                analyze_exps_f = run_signcon_analyses)
   }
 
   ## Unconscious Processing analysis
@@ -102,42 +102,46 @@ init_analysis <- function(type) {
                  sep = .Platform$file.sep))
     conf <- new(analysisConfCName, 'datasets\\cogdb\\','', 
                 'results\\Cognitive Psychology_Results.csv', preprocess_dfs_cogdb, mean,
-                sum_fs = get_sum_fs_cogdb, analyze_exps_f = run_nhst_analyses)
+                sum_fs = get_sum_fs_cogdb, analyze_exps_f = run_signcon_analyses)
   }
   return(conf)
 }
 
 #' run_all_analyses
-#' the function gets a dataset, runs all analyses (NDT, DT, PBT, QUID) and returns
-#' a data frame of the results
+#' the function gets a dataset, runs all analyses (signcon, DT, PBT, QUID, OANOVA) 
+#' and returns a data frame of the results
 #' @param conf a configuration object to run all analyses according to
 #' @param analysis_fs a list that maps between experiment labels and the analysis
 #' function to use.  
 #' @param data the data of the given experiment to analyze (#Participants * #Trials) X (#Recorded Variables)
 #' @param exp_name the name of the experiment to analyze
 #' @return a data frame with all of the results:
-#' for NDT - (N_participants X (p-value, statistic, individual scores))
+#' for signcon - (N_participants X (p-value, statistic, individual scores))
 #' for DT - a single row with a p-value, statistic, low_ci and high_ci
 #' for quid - a single row with the Bayesian factor for the comparison between the global null
 #' model and the random effects model
 #' for PBT - a single row with the lower and upper bound of the returned HDI, and
 #' the MAP for the effect
+#' for OAVONA - the p-value and F-values according to the test
 run_all_analyses <- function(conf, analysis_fs, data, exp_name) {
   set.seed(conf@seed)
+  signcon_res <- test_sign_consistency(data,'idv', c('dv','iv2'), 'iv',
+                                       null_dist_samples = conf@n_samp,
+                                       summary_function = analysis_fs[[exp_name]]$summary)
+  directional_test_res <- test_directional_effect(data,'idv', c('dv','iv2'), 'iv',
+                                                  null_dist_samples = conf@n_samp, ci_reps = 10^5,
+                                                  summary_function = analysis_fs[[exp_name]]$summary)
   data.frame(
-    non_directional = test_sign_consistency(data,'idv', c('dv','iv2'), 'iv',
-                                            null_dist_samples = conf@n_samp,
-                                            summary_function = analysis_fs[[exp_name]]$summary)[c(1,2,4)],
-    directional_effect = test_directional_effect(data,'idv', c('dv','iv2'), 'iv',
-                                                 null_dist_samples = conf@n_samp, ci_reps = 10^5,
-                                                 summary_function = analysis_fs[[exp_name]]$summary)[c('statistic','p', 'ci_low', 'ci_high')],
+    signcon = signcon_res[c('p','statistic','null_dist')],
+    directional_test = directional_test_res[c('statistic','p', 'ci_low', 'ci_high')],
     quid = run_quid(data)[c('quid_bf')],
-    pbt = run_pbt(data, analysis_fs[[exp_name]]$test)[c('low','high','MAP')]
+    pbt = run_pbt(data, analysis_fs[[exp_name]]$test)[c('low','high','MAP')],
+    oanova = run_oanova_test(data)
   )
 }
 
-#' run_nhst_analyses
-#' the function gets a dataset, runs all NHST analyses (NDT, DT) and returns
+#' run_signcon_analyses
+#' the function gets a dataset, runs the signcon and directional analyses and returns
 #' a dataframe of the results
 #' @param conf a configuration object to run all analyses according to
 #' @param analysis_fs a list that maps between experiment labels and the analysis
@@ -145,17 +149,18 @@ run_all_analyses <- function(conf, analysis_fs, data, exp_name) {
 #' @param data the data of the given experiment to analyze
 #' @param exp_name the name of the experiment to analyze
 #' @return a data frame with all of the results:
-#' for NDT - (N_participants X (p-value, statistic, individual scores))
+#' for signcon - (N_participants X (p-value, statistic, individual scores))
 #' for DT - a single row with a p-value, statistic, low_ci and high_ci
-run_nhst_analyses <- function(conf, analysis_fs, data, exp_name) {
+run_signcon_analyses <- function(conf, analysis_fs, data, exp_name) {
   set.seed(conf@seed)
-  
+  signcon_res <- test_sign_consistency(data,'idv', c('dv','iv2'), 'iv',
+                                  null_dist_samples = conf@n_samp,
+                                  summary_function = analysis_fs[[exp_name]]$summary)
+  directional_test_res <- test_directional_effect(data,'idv', c('dv','iv2'), 'iv',
+                                                  null_dist_samples = conf@n_samp, ci_reps = 10^5,
+                                                  summary_function = analysis_fs[[exp_name]]$summary)
   data.frame(
-    non_directional = test_sign_consistency(data,'idv', c('dv','iv2'), 'iv',
-                                            null_dist_samples = conf@n_samp,
-                                            summary_function = analysis_fs[[exp_name]]$summary)[c('statistic','p')],
-    directional_effect = test_directional_effect(data,'idv', c('dv','iv2'), 'iv',
-                                                 null_dist_samples = conf@n_samp, ci_reps = 10^5,
-                                                 summary_function = analysis_fs[[exp_name]]$summary)[c('statistic','p', 'ci_low', 'ci_high')])
+    signcon = signcon_res[c('statistic','p')],
+    directional_test = directional_test_res[c('statistic','p', 'ci_low', 'ci_high')])
   
 }

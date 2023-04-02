@@ -4,6 +4,7 @@ library(ggpubr)
 library(patchwork)
 library(tidyr)
 library(scales)
+library('ggh4x')
 
 figures_fld <- 'figures'
 source(paste(figures_fld, 'plotting_utils.R', sep = .Platform$file.sep))
@@ -22,50 +23,54 @@ read_res_df <- function(fn) {
   df <- read.csv(fn) %>%
     mutate(type = gsub(basename(fn), pattern="_Results.csv$", replacement="")) %>%
     group_by(type,exp) %>%
-    summarise(non_directional.p = first(non_directional.p),
-              directional_effect.p = first(directional_effect.p)) %>%
-    dplyr::select(type, exp,non_directional.p,directional_effect.p)
+    summarise(signcon.p = first(signcon.p),
+              directional_test.p = first(directional_test.p)) %>%
+    dplyr::select(type, exp,signcon.p,directional_test.p)
 }
 # get a summary of the number of studies per data type
 all_results <- do.call(rbind, lapply(results_fns, read_res_df))
 sum_N <- all_results %>%
   group_by(type) %>%
   summarise(N = n())
-Nunique <- length(unique(unique(paste(all_results$exp, all_results$type, sep = '_'))))
 # summarise non-significant results
 # fitler ns resutls and add FDR corrected p values within analysis type
-ns_results <- all_results[all_results$directional_effect.p > alpha,] %>%
+ns_results <- all_results[all_results$directional_test.p > alpha,] %>%
   group_by(type) %>%
-  mutate(non_directional.p.corrected = p.adjust(non_directional.p,method = 'fdr'))
+  mutate(signcon.p.corrected = p.adjust(signcon.p,method = 'fdr'))
 # summarize ns results
 ns_sum_Ns <- ns_results %>%
   group_by(type) %>%
   summarise(N = n())
+# exclude UC
+N_ns_no_UC <- sum(ns_sum_Ns %>%
+  filter(type != "Unconscious Processing") %>%
+  pull(N))
 Nunique_ns <- length(unique(paste(ns_results$exp,ns_results$type, sep = '_')))
 # uncorrected across all types
-sig_nondir_cat <- ns_results %>%
-  mutate(non_dir_effect = non_directional.p <= alpha) %>% 
+sig_nondir_cat_no_uc <- ns_results %>%
+  filter(type != "Unconscious Processing") %>%
+  mutate(non_dir_effect = signcon.p <= alpha) %>% 
   group_by(non_dir_effect) %>%
   summarise(N = n()) %>%
   summarise(perc_nondir_sig = 100 * (1 - first(N) / sum(N)))
 
 # uncorrected - significant sign-consistency per category
 sig_nondir_cat <- ns_results %>%
-  mutate(non_dir_effect = non_directional.p <= alpha) %>%
+  mutate(non_dir_effect = signcon.p <= alpha) %>%
   group_by(type, non_dir_effect) %>%
   summarise(N = n()) %>%
   group_by(type) %>%
   summarise(perc_nondir_sig = 100 * (1 - first(N) / sum(N)))
 
 corrected_sig_nondir_cat <- ns_results %>%
-  mutate(non_dir_effect = non_directional.p.corrected <= alpha) %>%
+  mutate(non_dir_effect = signcon.p.corrected <= alpha) %>%
   group_by(type, non_dir_effect) %>%
   summarise(N = n()) %>%
   group_by(type) %>%
   summarise(perc_nondir_sig = 100 * (1 - first(N) / sum(N)))
 
 sig_nondir_all <- ns_results %>%
-  mutate(non_dir_effect = non_directional.p <= alpha) %>%
+  mutate(non_dir_effect = signcon.p <= alpha) %>%
   group_by(non_dir_effect) %>%
   summarise(N = n()) %>%
   summarise(perc_nondir_sig = 100 * (1 - first(N) / sum(N)))
@@ -73,7 +78,7 @@ sig_nondir_all <- ns_results %>%
 # within Cognitive Psychology
 cog_psy_analysis <- ns_results %>%
   filter(startsWith(type, 'Cognitive')) %>%
-  mutate(non_dir_effect = non_directional.p <= alpha, sub_cat = 
+  mutate(non_dir_effect = signcon.p <= alpha, sub_cat = 
            ifelse(startsWith(exp,'Adam'), 'VS', 
                   ifelse(startsWith(exp,'Battich'), 'Social' ,'Reproducibility'))) %>%
   mutate(sub_cat = factor(sub_cat), non_dir_effect = factor(non_dir_effect)) %>%
@@ -98,9 +103,9 @@ sig_areas_labels <- data.frame( label = paste0(c("p < ", "p > "), alpha),
   x = alpha + c(-sig_areas_x_marg/2.5, sig_areas_x_marg),
   y = alpha - rep(sig_areas_y_marg, 2))
 scatter_plt <- ns_results %>%
-  mutate(non_directional.p = eps + non_directional.p*(1-eps),
-         directional_effect.p = eps + directional_effect.p*(1-eps)) %>%
-  ggplot(aes(x=non_directional.p,y=directional_effect.p, fill = type)) +
+  mutate(signcon.p = eps + signcon.p*(1-eps),
+         directional_test.p = eps + directional_test.p*(1-eps)) %>%
+  ggplot(aes(x=signcon.p,y=directional_test.p, fill = type)) +
   geom_vline(xintercept = alpha, color = 'black', size = 1.5) +
   geom_point(size = 4, colour = 'black', stroke = 1, shape = 21) +
   scale_fill_manual(values = pal) +
@@ -111,19 +116,24 @@ scatter_plt <- ns_results %>%
                 limits = c(0.75 * alpha, 1)) +
   scale_x_log10(breaks = c(eps,alpha, 1),
                 labels = c(math_format()(log10(eps)), expression(alpha),'1')) +
-  coord_fixed() +
   theme_classic() +
   annotate("text", x = sig_areas_labels$x, y = sig_areas_labels$y, 
            label = sig_areas_labels$label, size = 16/.pt) +
   theme(axis.title.x = element_text(size=22),
         axis.title.y = element_text(size=18),
         axis.text = element_text(size=18),
-        legend.position = 'none')
+        legend.position = 'none') +
+  guides(x = guide_axis_truncated(
+    trunc_lower = c(eps, eps * 4/3),
+    trunc_upper = c(eps*1.1, 1)
+  ))+
+  coord_fixed()
+
 # plot density plot for each database (analysis type)
 density_nondir <- ns_results %>%
-  mutate(non_directional.p = eps+non_directional.p*(1-eps),
-         directional_effect.p = eps+directional_effect.p*(1-eps)) %>%
-  ggplot(aes(x = non_directional.p, fill = type, colour = type)) + 
+  mutate(signcon.p = eps+signcon.p*(1-eps),
+         directional_test.p = eps+directional_test.p*(1-eps)) %>%
+  ggplot(aes(x = signcon.p, fill = type, colour = type)) + 
   scale_fill_manual(values = pal) +
   geom_density(alpha = .3, size = 1.5) + 
   ylab('Density') +

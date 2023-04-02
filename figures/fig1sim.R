@@ -1,4 +1,3 @@
-rm(list = ls())
 library(signcon)
 library(ggplot2)
 library(dplyr)
@@ -49,11 +48,6 @@ prepare_data <- function(data, ci_percentile = 5) {
   highbnd <- 1- lowbnd
   percentiles <- c(lowbnd, 0.5, highbnd)
   percentile_cols <- c('low', 'med', 'high') 
-  # data_ps <- data %>%
-  #   group_by(idv,iv) %>%
-  #   summarise(q = percentile_cols,
-  #             RT = quantile(dv, percentiles)) %>%
-  #   spread(q,RT)
   data_ps <-   data %>%
     group_by(idv,iv) %>%
     summarise(q = percentile_cols,
@@ -94,10 +88,11 @@ generate_effects_plot <- function(data, graphics_conf) {
           axis.title = element_text(size = graphics_conf$x_title_size),
           axis.title.y = element_blank(),
           axis.text.y = element_blank(),
-          axis.ticks.y = element_blank()) +
+          axis.ticks.y = element_blank(),
+          axis.title.x = element_text(size = graphics_conf$x_title_size, vjust = 2),
+          plot.margin = (unit(c(.5, .5, .75, .5), "cm"))) +
     ylim(1, nrow(data)) +
     scale_y_continuous(breaks = c(1,seq(5, nrow(data), by = 5)))
-  
   return (plt)
 }
 
@@ -140,7 +135,9 @@ generate_ps_plot <- function(data_ps_cong, data_ps_incong, graphics_conf) {
           axis.title.y = element_blank(),
           axis.text.y = element_blank(),
           axis.ticks.y = element_blank(),
-          axis.line.y = element_blank()) +
+          axis.line.y = element_blank(),
+          axis.title.x = element_text(vjust=-2) ,
+          plot.margin = (unit(c(.5, .5, .75, .5), "cm"))) +
     ylim(1, nrow(data_ps_cong)) +
     scale_y_continuous(breaks = c(1,seq(5, nrow(data_ps_cong), by = 5)))
   return (plt)
@@ -173,7 +170,7 @@ generate_agg_plot <- function(data, graphics_conf, fn, rng_ratio = -1) {
     rng_ratio <- rng_right / rng_left
   }
   plt <- grid.arrange(p_left ,p_right, widths = c(1, rng_ratio), ncol = 2,
-               left = textGrob("Subject", rot = 90, vjust = 1, gp = gpar(fontsize = graphics_conf$x_title_size)))
+               left = textGrob("Subject", rot = 90, vjust = .5, gp = gpar(fontsize = graphics_conf$x_title_size)))
   ggsave(paste(plots_fld,paste0(fn, '.png'), sep = .Platform$file.sep), 
          width=10, height=5,plot = plt)
   
@@ -185,13 +182,16 @@ graphics_conf <- list(size_seg = 2, color_spreading_lines = '#71E9CC',
                       margin_y_subj = 0.5, margin_y_conds = 0.125, legnth_med = 2,
                       incong_color = 'black', cong_color = 'red', med_color = 'gray',
                       vline_size = 1, x_title_size = 22, x_text_size = 20)
+# for illustration, add an RT offset
 offset_rt <- 650
 # generate nde plot
-nde_data <- generate_dataset(p_mean = 0, p_sd = 15, N = 15, trials_per_cnd = 100, wSEsd = 30)
-nde_data$dv <- nde_data$dv + offset_rt
+nde_data <- generate_dataset(p_mean = 0, p_sd = 15, N = 15, 
+                             trials_per_cnd = 100, wSEsd = 30, 
+                             dv_offset = offset_rt)
 ratio <- generate_agg_plot(nde_data, graphics_conf, 'nde_plt')
-sn_data <- generate_dataset(p_mean = 0, p_sd = 0, N = 15, trials_per_cnd = 100, wSEsd = 100)
-sn_data$dv <- sn_data$dv + offset_rt
+sn_data <- generate_dataset(p_mean = 0, p_sd = 0, N = 15, 
+                            trials_per_cnd = 100, wSEsd = 100,
+                            dv_offset = offset_rt)
 generate_agg_plot(sn_data, graphics_conf, 'sn_plt', ratio)
 
 # common analysis, two-sided t-test
@@ -213,7 +213,6 @@ sn_t_test <- sn_data %>%
 # Bayesian analysis
 # QUID
 source('datasets_analysis\\quid.R')
-run_quid(sn_data)
 nde_quid_res <- run_quid(nde_data)
 sn_quid_res <- run_quid(sn_data)
 nde_bf <- 1/ nde_quid_res$quid_bf
@@ -230,6 +229,10 @@ t_f <- function(data) {
 nde_pbt_res <- run_pbt(nde_data, test_function = t_f)
 sn_pbt_res <- run_pbt(sn_data, test_function = t_f)
 
+# OANOVA Test
+source('datasets_analysis\\oanova_test.R')
+nde_OANOVA_res <- run_oanova_test(nde_data)
+sn_OANOVA_res <- run_oanova_test(sn_data)
 
 ## plot Kruschke style plots for the figure
 nde_b <- dists$normal

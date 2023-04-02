@@ -1,7 +1,10 @@
+library(dplyr)
 library(tidyr)
+library(signcon)
 source('datasets_analysis\\definitions.R')
 source('datasets_analysis\\quid.R')
 source('datasets_analysis\\pbt.R')
+source('datasets_analysis\\oanova_test.R')
 
 #' get_input_df
 #' The function reads all datasets according to the 'analysis_conf' parameter to generate
@@ -54,15 +57,11 @@ get_input_df <- function(analysis_conf) {
 #' and analyze the relevant datasets according to all relevant tests
 run_analysis <-function(analysis_conf) {
   dfs <- get_input_df(analysis_conf)
+  browser()
   analysis_fs <- analysis_conf@sum_fs(analysis_conf, unique(dfs$exp))
   res <- dfs %>%
     group_by(exp) %>%
     group_modify(~analysis_conf@analyze_exps_f(analysis_conf, analysis_fs, .x,.y[[1]]))
-  
-  # adjust p-values of the directional test
-  if('directional_effect.p' %in% names(res)){
-    res <- res %>% mutate(directional_effect.p = 2*min(directional_effect.p, 1-directional_effect.p))
-  }
   
   res_dir <- dirname(analysis_conf@results_fn)
   if(!dir.exists(res_dir)) {

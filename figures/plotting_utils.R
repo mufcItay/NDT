@@ -11,7 +11,6 @@ if(!dir.exists(plots_fld)) {
 source(paste(apdx_fld, 'generate_dataset.R', sep = .Platform$file.sep))
 source(paste(analysis_fld, 'definitions.R', sep = .Platform$file.sep))
 
-
 # Coded by Rasmus Bååth  
 # rasmus.baath@lucs.lu.se
 # www.sumsar.net
@@ -71,13 +70,13 @@ dists <- list(
     x = seq(-3.3, 3.3, 0.01),
     # If top_space = 0 the distribution extends to the top of the graph, if 
     # 0 > top_space < 1 then that proportion of space is left at the top.
-    top_space = 0,
+    top_space = .35,
     # The function defining the probability density function
     ddist = dnorm,
     # The arguments given to the probability density function (has to be named) 
     ddist_params = list(mean=0, sd=1),
     # Coordinates and names for the parameter labels
-    labels = list(mean = c(0.5, 0.3), right_sd = c(0.80, 0.5), left_sd = c(0.20, 0.5))
+    labels = list(mean = c(0.5, .8), right_sd = c(0.80, 0.5), left_sd = c(0.20, 0.5))
   ),
   beta = list(
     name = "beta",
@@ -408,7 +407,6 @@ plot_dist_png <- function(dist, labels=c(), fname="", color="skyblue", plot_dist
 
 # Function that renders text as an image. Useful for constructing images of equations. 
 # See ?plotmath for examples and documentation
-
 plot_text_svg <- function(expr, fname) {
   svg(fname, bg="transparent")
   plot.new()

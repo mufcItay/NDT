@@ -12,6 +12,7 @@ results_fld <- paste(apdx_fld, 'results', sep = .Platform$file.sep)
 source(paste(apdx_fld, 'generate_dataset.R', sep = .Platform$file.sep))
 source(paste(analysis_fld, 'quid.R', sep = .Platform$file.sep))
 source(paste(analysis_fld, 'pbt.R', sep = .Platform$file.sep))
+source(paste(analysis_fld, 'oanova_test.R', sep = .Platform$file.sep))
 # create the results folder if it does not exist
 if(!dir.exists(results_fld)) {
   dir.create(results_fld)
@@ -37,7 +38,8 @@ get_cluster <- function(n_cores_from_max = 1) {
   )
   parallel::clusterExport(cluster, c("generate_dataset", "run_quid", "run_pbt",
                                      "quid", "prep.models", "make.bf", "prior.p.greater",
-                                     "pbt_test_f", "bayesprev_hpdi", "bayesprev_map"))
+                                     "pbt_test_f", "bayesprev_hpdi", "bayesprev_map",
+                                     "run_oanova_test"))
   doParallel::registerDoParallel(cl = cluster)
   return(cluster)
 }
@@ -70,7 +72,7 @@ run_simulation <- function(conf, inner_sim_f, cluster = NULL) {
   for (param_ind in 1:n_sim_conditions) { 
     # iterate over repetitions within each parameter combination
     res = foreach (seed = seeds, .combine = 'c',
-                   .packages = c("dplyr", "signcon", "nleqslv")) %dopar% {
+                   .packages = c("dplyr", "signcon", "nleqslv")) %do% {
                      set.seed(seed)
                      params <- conf$params[param_ind,]
                      # create the datasets according to parameters
@@ -78,7 +80,8 @@ run_simulation <- function(conf, inner_sim_f, cluster = NULL) {
                                             p_sd = params$sigma_b, seed = seed, 
                                             N = params$N_p, 
                                             trials_per_cnd = params$N_t, 
-                                            wSEsd = params$sigma_w)
+                                            wSEsd = params$sigma_w,
+                                            dv_offset = 650)
                      inner_sim_f(conf, params, df, seed)
                      }
     # save all results
