@@ -1,10 +1,6 @@
 library(signcon)
 library(dplyr)
 
-# Set our working directory and load data
-dirPath <- dirname(rstudioapi::getSourceEditorContext()$path)
-setwd(dirPath)
-
 # read the dataset
 data_dir <- 'data'
 study_name <- 'Hurme et al_2020'
@@ -29,7 +25,6 @@ read_data_f <- function(dir_name) {
   return (data %>% dplyr::select(idv, iv, exp, dv))
 }
 data <- do.call(rbind, lapply(exps, read_data_f))
-write.csv(data, paste0(study_name,'.csv'))
 
 # validate against Fig 2C (Masking) and 3C )TMS in the paper
 data %>% group_by(exp, idv, iv) %>% summarise(m = mean(dv)) %>%
@@ -42,3 +37,6 @@ data %>% filter(exp == 'Hurme et al_2020_Masking_Blue') %>%
 data %>% filter(exp == 'Hurme et al_2020_Masking_Blue') %>% 
   group_by(exp, idv, iv) %>% summarise(m = mean(dv)) %>%
   group_by(exp, iv) %>% summarise(m = mean(m)) %>% group_by(exp) %>% summarise(m = diff(m))
+
+write.csv(data, paste0(study_name,'.csv'))
+

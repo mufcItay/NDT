@@ -11,6 +11,64 @@ if(!dir.exists(plots_fld)) {
 source(paste(apdx_fld, 'generate_dataset.R', sep = .Platform$file.sep))
 source(paste(analysis_fld, 'definitions.R', sep = .Platform$file.sep))
 
+
+#' add_y_separators
+#' the function adds breaks / separators to the y axis of a plot
+#' @param plt the plot to add separators to
+#' @param y_seps the y values at which to set the separators
+#' @param y_lim the y limits for the plot
+#' @param angle the angle of the separators
+#' @param length the length of the separators 
+#' @param linewidth the width of the separators
+#'
+#' @return the resulting plot with the separators
+add_y_separators <- function(plt, y_seps, y_lim, min_x = .75, angle = 45, length = .1, linewidth = 1.5){
+  add_y <-  length * sin(angle * pi/180)
+  add_x <- length * cos(angle * pi/180)
+  ## create segment locations list
+  segments <- list(y = y_seps - add_y, yend = y_seps + add_y, 
+                   x = rep(min_x - add_x, length(y_seps)), xend = rep(min_x + add_x, length(y_seps)))
+  ## return the resulting plot
+  plt + 
+    guides(y = guide_axis_truncated(
+      trunc_lower = c(y_lim[1], y_seps[1]),
+      trunc_upper = c(y_seps[2], y_lim[2]))) +
+    annotate("segment", linewidth = linewidth,
+             x = segments$x, xend = segments$xend,
+             y = segments$y, yend = segments$yend) +
+    # you need to set expand to 0
+    scale_x_discrete(expand = c(0,0)) +
+    ## to make the angle look like specified, you would need to use coord_equal()
+    coord_cartesian(clip = "off", xlim = c(min_x, NA))   
+}
+
+#' add_x_separators
+#' the function adds breaks / separators to the x axis of a plot
+#' @param plt the plot to add separators to
+#' @param x_seps the x values at which to set the separators
+#' @param x_lim the x limits for the plot
+#' @param angle the angle of the separators
+#' @param length the length of the separators 
+#' @param linewidth the width of the separators
+#'
+#' @return the resulting plot with the separators
+add_x_separators <- function(plt, x_seps, x_lim, angle = 45, length = .1, linewidth = 1.5){
+  add_y <-  length * sin(angle * pi/180)
+  add_x <- length * cos(angle * pi/180)
+  ## create segment locations list
+  segments <- list(x = x_seps - add_x, xend = x_seps + add_x, 
+                   y = rep(1 - add_y, length(x_seps)), yend = rep(1 + add_y, length(x_seps)))
+  browser()
+  ## return the resulting plot
+  plt + 
+    guides(x = guide_axis_truncated(
+      trunc_lower = c(x_lim[1], x_seps[1]),
+      trunc_upper = c(x_seps[2], x_lim[2]))) +
+    annotate("segment", linewidth = linewidth,
+             x = segments$x, xend = segments$xend,
+             y = segments$y, yend = segments$yend)
+}
+
 # Coded by Rasmus Bååth  
 # rasmus.baath@lucs.lu.se
 # www.sumsar.net

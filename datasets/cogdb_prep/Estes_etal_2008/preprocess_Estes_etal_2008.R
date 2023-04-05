@@ -1,6 +1,5 @@
 library(dplyr)
 
-setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 data<-read.spss(first(list.files(pattern = '.sav')), to.data.frame =TRUE)
 #Variable "Subj" needs to be a factor to perform ezAnova-function
 data$Subj<-as.factor(data$Subj)
@@ -15,10 +14,3 @@ data <- data.cleaned %>%
   dplyr::select(idv,iv, dv,exp)
 
 write.csv(data, 'Estes_etal_2008.csv')
-
-
-library(signcon)
-p <- test_directional_effect(data, idv = 'idv', dv = 'dv', iv = 'iv')$p
-2 * min(p,1-p)
-ndir_p <- test_sign_consistency(data, idv = 'idv', dv = 'dv', iv = 'iv', null_dist_samples = 10^5)$p
-ndir_p

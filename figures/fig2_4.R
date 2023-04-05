@@ -64,10 +64,10 @@ add_simulation_results <- function(emp_data) {
 #' @return the plot describing the results of the (non-directional) sign-consistency test
 generate_signcon_plot <- function(data, graphics_conf, alpha = .05) {
   n_sim <- length(unique(data[data$is_sim,]$exp))
-  data_sim_rect <- data.frame(ymin = 1, ymax = n_sim + .5, 
-                              xmin = 0, xmax = 1)
+  data_sim_rect <- data.frame(ymin = 1, ymax = n_sim + .5,
+                              xmin = 0, xmax = 100)
   data <- data %>%
-    mutate(effect = p <= alpha, exp = factor(exp))
+    mutate(effect = p <= alpha, exp = factor(exp), stat = stat * 100, null = null * 100)
   effect_per_exp <- data %>%
     group_by(exp) %>%
     summarise(effect = first(effect)) %>%
@@ -79,7 +79,7 @@ generate_signcon_plot <- function(data, graphics_conf, alpha = .05) {
     group_by(exp) %>% 
     summarise(stat = first(stat)) %>% 
     mutate(x = stat, xend = stat, y = as.integer(exp), yend = as.integer(exp) + .5)
-  scs = data %>% 
+  scs <- data %>% 
     group_by(exp) %>% 
     summarise(sc = unique(stat), null_dist_id = sum(null), effect = unique(effect)) %>%
     mutate(exp = as.integer(exp))
@@ -94,11 +94,11 @@ generate_signcon_plot <- function(data, graphics_conf, alpha = .05) {
     stat_density_ridges(geom = "density_ridges_gradient",alpha = 1, size=1, 
                         vline_size = graphics_conf$vline_size, 
                         vline_color = c(graphics_conf$vline_color), 
-                        quantile_fun = qf, from = 0, to = 1,quantiles = 2, 
+                        quantile_fun = qf, from = 0, to = 100,quantiles = 2, 
                         quantile_lines = TRUE, calc_ecdf = TRUE, fill= graphics_conf$dist_below_color) +
     geom_segment(data = highly_sig_markers_df, aes(fill = NULL, x = x, xend = xend, y = y, yend = yend), 
                      linewidth = graphics_conf$vline_size, color = graphics_conf$vline_color) +
-    scale_x_continuous(limits=c(0,1), breaks=seq(0,1,0.1))+
+    scale_x_continuous(limits=c(0,100), breaks=seq(0,100,10))+
     coord_flip() +
     ylab('Experiment') +
     xlab('Sign-Consistency (%)') +
@@ -189,15 +189,13 @@ generate_quid_plot <- function(data, graphics_conf, criteria = 3, eps = 10^-2) {
     scale_x_discrete(expand=c(0.02, 0)) +
     scale_y_continuous(label = function(x) round(10^x,digits = 2),
                        limits = c(min(data$log_bf) - .1, max(data$log_bf) + .1), 
-                       breaks= ticks_bf) +
-    guides(y = guide_axis_truncated(
-      trunc_lower = log10(c(eps, 1/eps - 15)),
-      trunc_upper = log10(c(1/eps - 35, 1/eps))
-    )) +
-    annotate("text", x = -Inf, y = log10(c(1/eps - 35, 1/eps -15)) * 1.015, label = "-", size = 10) +
-    coord_cartesian(clip = "off")
+                       breaks= ticks_bf)
+  res_plt <- add_y_separators(plt, y_seps = log10(c(1/eps - 15, 1/eps - 35)),
+                        y_lim = log10(c(eps, 1/eps)), min_x = .75,
+                        angle = graphics_conf$seps_angle, length = graphics_conf$seps_length, 
+                        linewidth= graphics_conf$seps_lw)
   
-  return (plt)
+  return (res_plt)
 }
 
 #' generate_OANOVA_plot
@@ -253,15 +251,12 @@ generate_OANOVA_plot <- function(data, graphics_conf, alpha = .05, eps = 10^-3) 
     scale_x_discrete(expand=c(0.02, 0)) +
     scale_y_continuous(label = function(x) round(10^x,digits = 3),
                        limits = c(log10(eps-eps/5), log10(1)), 
-                      breaks= ticks_p) +
-    guides(y = guide_axis_truncated(
-      trunc_lower = log10(c(eps, eps * 4/3)),
-      trunc_upper = log10(c(eps*1.1, 1))
-    )) +
-    annotate("text", x = -Inf, y = log10(c(eps * 1.1, eps * 4/3)) * 0.995, label = "-", size = 10) +
-    coord_cartesian(clip = "off")
-  
-  return (plt)
+                      breaks= ticks_p)
+  res_plt <- add_y_separators(plt, y_seps = log10(c(eps * 5/3, eps * 4/3)),
+                              y_lim = log10(c(eps, 1)), min_x = .75,
+                              angle = graphics_conf$seps_angle, length = graphics_conf$seps_length, 
+                              linewidth= graphics_conf$seps_lw)
+  return (res_plt)
 }
 
 #' generate_pbt_plot
@@ -309,7 +304,8 @@ generate_pbt_plot <- function(data, graphics_conf) {
           axis.title.x = element_text(size = graphics_conf$x_title_size, vjust = -3),
           axis.title.y = element_text(margin = margin(t = 0, r = 17, b = 0, l = 0)),
           plot.margin = (unit(c(.5, .5, 1, .5), "cm"))) +
-    scale_x_discrete(expand=c(0.02, 0))
+    scale_x_discrete(expand=c(0.0, 0)) +
+    coord_cartesian(clip = "off", xlim = c(.75, NA))   
   return (plt)
 }
 
@@ -416,7 +412,8 @@ graphics_conf <- list(title_size = 30, size_seg = 2,
                       dist_below_color = '#dadada', dist_above_color = '#646464',
                       x_title_size = 22, 
                       x_text_size = 17, sim_rect_color = '#8A62A4', 
-                      shapes_per_sim = list('TRUE' = 22, 'FALSE' = 21))
+                      shapes_per_sim = list('TRUE' = 22, 'FALSE' = 21),
+                      seps_angle = 30, seps_lw = .7, seps_length = .1)
 
 
 # generate the PBT sub-plot
@@ -451,11 +448,13 @@ graphics_conf$annotate_bfs_y_space_low <- log10(1.75)
 graphics_conf$annotate_bfs_y_space_high <- log10(1.8)
 ns_plt_quid <- generate_quid_plot(ns_quid_res,graphics_conf, criteria = bf_criteria)
 ns_plt_quid
-graphics_conf$annotate_bfs_x_low <- 2.8
-graphics_conf$annotate_bfs_x_high <- 3.2
-graphics_conf$annotate_bfs_y_space_low <- log10(2.1)
-graphics_conf$annotate_bfs_y_space_high <- log10(4)
-effect_plt_quid <- generate_quid_plot(effect_quid_res,graphics_conf, criteria = bf_criteria)
+effect_graphics_conf <- graphics_conf
+effect_graphics_conf$annotate_bfs_x_low <- 2.8
+effect_graphics_conf$annotate_bfs_x_high <- 3.2
+effect_graphics_conf$annotate_bfs_y_space_low <- log10(2.1)
+effect_graphics_conf$annotate_bfs_y_space_high <- log10(4)
+effect_graphics_conf$seps_length = graphics_conf$seps_length / 2
+effect_plt_quid <- generate_quid_plot(effect_quid_res,effect_graphics_conf, criteria = bf_criteria)
 effect_plt_quid
 
 ns_n_effect_QUID <- sum(ns_quid_res$quid_bf > bf_criteria)
@@ -475,7 +474,9 @@ graphics_conf$title <- 'Omnibus ANOVA Test (OANOVA)'
 eps <- 10^-3
 ns_plt_OANOVA <- generate_OANOVA_plot(ns_OANOVA_res,graphics_conf, eps = 10^-3)
 ns_plt_OANOVA
-effect_plt_OANOVA <- generate_OANOVA_plot(effect_OANOVA_res,graphics_conf, eps = 10^-3)
+effect_graphics_conf <- graphics_conf
+effect_graphics_conf$seps_length = graphics_conf$seps_length / 2
+effect_plt_OANOVA <- generate_OANOVA_plot(effect_OANOVA_res,effect_graphics_conf, eps = 10^-3)
 effect_plt_OANOVA
 
 # OANOVA test stats

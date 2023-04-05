@@ -1,4 +1,3 @@
-rm(list=ls(all=T)); # clear workspace
 # Load libraries
 library(R.matlab)
 library(dplyr)
@@ -132,6 +131,5 @@ getTibble <- function(exp, isPostTest = F) {
   return (tib)
 }
 
-setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 all_exps <- rbind(get_BM_data(1), get_BM_data(2), get_BM_data(3))
 write.csv(all_exps, file = 'Biderman & Mudrik_2018.csv')

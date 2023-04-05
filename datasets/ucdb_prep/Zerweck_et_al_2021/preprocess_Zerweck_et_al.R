@@ -1,9 +1,4 @@
-library(signcon)
 library(dplyr)
-
-# Set our working directory and load data
-dirPath <- dirname(rstudioapi::getSourceEditorContext()$path)
-setwd(dirPath)
 
 # read the dataset
 study_name <- 'Zerweck et al_2021'
@@ -46,12 +41,10 @@ read_data_f <- function(dir_name) {
   
   return (data %>%
             rename(dv = RT) %>%
-            select(idv, iv, exp, dv))
+            dplyr::select(idv, iv, exp, dv))
 }
 data <- do.call(rbind, lapply(exps, read_data_f))
 data <- data[data$exp != 'Zerweck et al_2021_1',]
-write.csv(data, paste0(study_name,'.csv'))
-
 
 # validate against results in each section + Figures 4,6
 data %>%
@@ -61,3 +54,5 @@ data %>%
   summarise(m = diff(m)) %>%
   group_by(exp) %>%
   summarise(effect = mean(m))
+
+write.csv(data, paste0(study_name,'.csv'))

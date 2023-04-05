@@ -1,4 +1,3 @@
-rm(list=ls(all=T)); # clear workspace
 # Load libraries
 library(R.matlab)
 library(dplyr)
@@ -68,26 +67,9 @@ getOver65PTAccuracy <- function(data, threshold = 0.65) {
   high_perf_subjects <- unique(high_perf$subNum)
   return (high_perf_subjects)
 }
-  
 
-setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 all_exps <- rbind(get_Faivre_data(1, IDENTICAL_LBL), get_Faivre_data(1, DIFFERENT_LBL),
                   get_Faivre_data(2, IDENTICAL_LBL), get_Faivre_data(2, DIFFERENT_LBL),
                   get_Faivre_data(3, IDENTICAL_LBL), get_Faivre_data(3, DIFFERENT_LBL),
                   get_Faivre_data(4, IDENTICAL_LBL), get_Faivre_data(4, DIFFERENT_LBL))
 write.csv(all_exps, file = 'Faivre et al._2014.csv')
-
-
-a <- all_exps %>%
-  mutate(dv=log(dv)) %>%
-  group_by(exp) %>%
-  group_modify(~data.frame(test_directional_effect(
-    .x, idv = 'idv', iv = 'iv', dv = 'dv', 
-    summary_function = mean, null_dist_samples = 10000)[c('statistic','p')]))
-a$statistic <- exp(a$statistic)
-a
-
-all_exps %>%
-  mutate(dv=log(dv)) %>%
-  group_by(exp, idv, iv) %>% summarise(m = mean(dv)) %>% group_by(exp,idv) %>%
-  summarise(m = diff(exp(m))) %>% group_by(exp) %>% summarise(m = mean(m))

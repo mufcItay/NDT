@@ -4,8 +4,6 @@ library(R.matlab)
 library(reshape2)
 library(foreign)
 
-dirPath <- dirname(rstudioapi::getSourceEditorContext()$path)
-setwd(dirPath)
 expSep = '_'
 
 get_exp_data <- function(exp, exp_label) {
@@ -55,10 +53,3 @@ data_all <- do.call(rbind,lapply(list(data_1a,data_1b, data_1c, data_1d,
                                       data_3b_GC, data_3b_GV), 
                                  function(d) d %>% dplyr::select(idv, iv, dv, exp)))
 write.csv(data_all, 'Adam_et_al_2021.csv')
-
-library(signcon)
-res <- data_all %>%
-  group_by(exp) %>%
-  group_modify(~data.frame(dt = 
-    test_directional_effect(.x, idv = 'idv', iv = 'iv', dv = 'dv')[c('statistic','p')])) %>%
-  mutate(dt.p = 2 * min(dt.p, 1-dt.p))

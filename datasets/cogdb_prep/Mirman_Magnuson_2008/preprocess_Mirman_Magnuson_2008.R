@@ -3,8 +3,6 @@ library(tidyverse)
 library(foreign)
 library(reshape2)
 
-setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
-
 data<-read.csv('replication_raw_data_processed.csv',header = TRUE)
 data.long <- gather(data, SUBJECT,RT,setdiff(names(data), c('WORD','COND')))
 data.long$SUBJECT <- gsub("X","",as.character(data.long$SUBJECT))
@@ -25,8 +23,3 @@ data <- data.long %>%
   dplyr::select(idv, iv, dv, exp)
 
 write.csv(data, 'Mirman_Magnuson_2008.csv')
-
-library(signcon)
-p <-test_directional_effect(data, idv = 'idv', dv = 'dv', iv = 'iv')$p
-2 * min(p,1-p)
-test_sign_consistency(data, idv = 'idv', dv = 'dv', iv = 'iv')$p

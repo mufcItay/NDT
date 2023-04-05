@@ -1,10 +1,5 @@
 library(signcon)
 library(dplyr)
-library(tidyr)
-
-# Set our working directory and load data
-dirPath <- dirname(rstudioapi::getSourceEditorContext()$path)
-setwd(dirPath)
 
 
 #create function to exclude observations
@@ -67,75 +62,12 @@ data <- data_main %>%
   filter(visibility==0) %>%
   rename(idv = subj, iv = congruency, iv2 = certainty, dv = RT) %>%
   mutate(exp = study_name, dv = dv * 1000) %>% 
-  select(idv, iv, iv2, exp, dv)
-
-
-write.csv(data, 'Benthien & Hesselmann_2021.csv')
-
-
-f_int_rt <- function(mat) {
-  res <- stats::median(mat[mat[,'iv2'] == 0, 'dv']) - 
-    stats::median(mat[mat[,'iv2'] == 1, 'dv'])
-  return (res)
-}
-
-# nondir_tst <- test_sign_consistency(data, idv = 'idv', dv = c('dv','iv2'), iv = 'iv', 
-#                                     null_dist_samples = 10^5, 
-#                                     summary_function = f_int_rt)
+  dplyr::select(idv, iv, iv2, exp, dv)
 
 # validate against Table. 1 in the paper
 data %>% group_by(idv, iv2, iv) %>% summarise(m = mean(dv)) %>%
   group_by(iv2, iv) %>% summarise(m = mean(m))
 
-########################################### UTILITY
-calc_effect <- function(mat, args = list(summary_f = mean, iv = 'iv', dv = 'dv')) {
-  return (as.data.frame(mat) %>% 
-    group_by(!!dplyr::sym(args$iv)) %>% 
-    summarise(val = args$summary_f(!!dplyr::sym(args$dv))) %>% 
-    summarise(effect = diff(val)) %>% 
-    pull(effect))
-}  
 
-perm_test_subject <- function(mat, obs, summary_f, summary_f_args = list(iv = 'iv', dv = 'dv'), 
-                              n_perm = 10^4, two.sided = TRUE) {
-  inner_perm <- function(iteration, mat, summary_f, summary_f_args) {
-    n_trials <- nrow(mat)
-    mat[,summary_f_args$dv] <- mat[sample(n_trials),summary_f_args$dv]
-    return (summary_f(mat, summary_f_args))
-  }
-  if('iv2' %in% summary_f_args) {
-    resamp_f_args <- summary_f_args
-    resamp_f_args$iv = resamp_f_args$iv2 
-    resample_f <- function(iteration, mat) {
-      summary_f(mat[sample(nrow(mat), replace = TRUE), ], resamp_f_args)
-    }
-    conds <- unique(mat[,summary_f_args$iv])
-    iv1 <- sapply (1:n_perm, resample_f, mat=mat[mat[,summary_f_args$iv] == conds[1],])
-    iv2 <- sapply (1:n_perm, resample_f, mat=mat[mat[,summary_f_args$iv] == conds[1],])
-    null_dist <- sample(c(-1,1), n_perm, replace = TRUE) * (iv1 - iv2)
-  } else {
-    null_dist <- sapply(1:n_perm, inner_perm, mat = mat, 
-                        summary_f = summary_f, summary_f_args = summary_f_args)
-    
-  }
-  p_value <- mean(obs < null_dist, na.rm=TRUE)
-  if(two.sided) {p_value <- 2 * min(p_value, 1 - p_value)}
-  return (p_value)
-}
+write.csv(data, 'Benthien & Hesselmann_2021.csv')
 
-summary_f <- function(mat) {
-  benthien_hesselmann_args <- list(idv = 'idv', iv = 'iv', iv2 = 'iv2', dv = 'dv', summary_f = mean)
-  return (calc_effect(mat, args = benthien_hesselmann_args))
-}
-test_f <- function(mat) {
-  benthien_hesselmann_args <- list(idv = 'idv', iv = 'iv', iv2 = 'iv2', dv = 'dv', summary_f = mean)
-  obs <- calc_effect(mat, args = benthien_hesselmann_args)
-  return(perm_test_subject(as.matrix(mat), obs, 
-                           summary_f = calc_effect, summary_f_args = benthien_hesselmann_args))
-}
-
-########################################### UTILITY
-
-summary_f(data[data$idv == 1,])
-res <- data %>% select(idv, iv, iv2, dv) %>% group_by(idv) %>% 
-   group_modify(~data.frame(p = test_f(.x)))
