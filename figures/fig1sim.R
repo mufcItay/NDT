@@ -185,10 +185,18 @@ graphics_conf <- list(size_seg = 2, color_spreading_lines = '#71E9CC',
 # for illustration, add an RT offset
 offset_rt <- 650
 # generate nde plot
-nde_data <- generate_dataset(p_mean = 0, p_sd = 15, N = 15, 
-                             trials_per_cnd = 100, wSEsd = 30, 
+nde_sd_b <- 15
+nde_sd_w <- 30
+nde_n <- 15
+nde_trials <- 100
+nde_data <- generate_dataset(p_mean = 0, p_sd = nde_sd_b, N = nde_n, 
+                             trials_per_cnd = nde_trials, wSEsd = nde_sd_w, 
                              dv_offset = offset_rt)
 ratio <- generate_agg_plot(nde_data, graphics_conf, 'nde_plt')
+sn_sd_b <- 0
+sn_sd_w <- 100
+sn_n <- 15
+sn_trials <- 100
 sn_data <- generate_dataset(p_mean = 0, p_sd = 0, N = 15, 
                             trials_per_cnd = 100, wSEsd = 100,
                             dv_offset = offset_rt)
@@ -200,17 +208,18 @@ nde_t_test <- nde_data %>%
   summarise(mrt = mean(dv)) %>%
   group_by(idv) %>%
   summarise(effect = diff(mrt)) %>%
-  pull(effect) %>%
+  dplyr::pull(effect) %>%
   t.test()
 sn_t_test <- sn_data %>%
   group_by(idv, iv) %>%
   summarise(mrt = mean(dv)) %>%
   group_by(idv) %>%
   summarise(effect = diff(mrt)) %>%
-  pull(effect) %>%
+  dplyr::pull(effect) %>%
   t.test()
 
 # Bayesian analysis
+bf_criteria <- 3
 # QUID
 source('datasets_analysis\\quid.R')
 nde_quid_res <- run_quid(nde_data)

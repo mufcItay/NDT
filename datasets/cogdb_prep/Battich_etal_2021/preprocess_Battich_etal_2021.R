@@ -14,7 +14,7 @@ exc_participants <- data %>%
   group_by(idv,target) %>%
   summarise(perf = mean(correct)) %>%
   filter(perf <= min_perf) %>%
-  pull(idv)
+  dplyr::pull(idv)
 
 # RT outliers (trial level) + low preforming ps (subj level)
 data <- data %>%

@@ -129,7 +129,7 @@ get_diff_effect <- function(mat, args = list(summary_f = mean, iv = 'iv', dv = '
             group_by(!!dplyr::sym(args$iv)) %>% 
             summarise(val = args$summary_f(!!dplyr::sym(args$dv))) %>% 
             summarise(effect = diff(val)) %>% 
-            pull(effect))
+            dplyr::pull(effect))
 }  
 
 
@@ -170,7 +170,7 @@ exclude_participants <- function(data, condition_vars, min_trials = 5) {
     group_by_at(.vars = condition_vars) %>% 
     count(unique_id, name = "n", .drop = F) %>% 
     filter (n < min_trials) %>%
-    pull(unique_id)
+    dplyr::pull(unique_id)
 
   # exclude participants with zero variance in all levels of the independent
   # variable
@@ -180,7 +180,7 @@ exclude_participants <- function(data, condition_vars, min_trials = 5) {
     group_by_at(.vars = vars(unique_id)) %>% 
     summarise(var = sum(var)) %>% 
     filter(var == 0) %>% 
-    pull(unique_id)
+    dplyr::pull(unique_id)
   
   # if there are participants to exclude, exclude them  
   exc_all = unique(c(exc_low_trials, exc_zero_var))

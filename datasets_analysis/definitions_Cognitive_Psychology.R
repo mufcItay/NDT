@@ -72,7 +72,7 @@ get_sum_fs_cogdb <- function(analysis_conf, experiments) {
 #' according to the summary function (for an interaction effect, use args$iv = 'iv2')
 get_diffscore_f <- function(mat, args = list(summary_f = mean, iv = 'iv', dv = 'dv')) {
   mat <- as.data.frame(mat) %>% mutate(dv = as.numeric(dv))
-  values <- mat %>% pull(dplyr::sym(args$iv))
+  values <- mat %>% dplyr::pull(dplyr::sym(args$iv))
   conds <- sort(unique(values))
   res <- args$summary_f(mat[values == conds[2],]$dv) - 
     args$summary_f(mat[values == conds[1],]$dv)

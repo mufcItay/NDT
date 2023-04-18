@@ -4,7 +4,8 @@ library(stringr)
 library(gridExtra)
 library(ggtext)
 library(ggridges)
-library('ggh4x')
+library(ggh4x)
+
 
 figures_fld <- 'figures'
 source(paste(figures_fld, 'plotting_utils.R', sep = .Platform$file.sep))
@@ -34,16 +35,16 @@ add_simulation_results <- function(emp_data) {
   gn_df$oanova.p <- sn_OANOVA_res$p
   gn_df$signcon.p <- sign_con_sn$p
   gn_df$signcon.statistic <- sign_con_sn$statistic
-  qd_df <- data.frame(exp = rep('QD', n_null_samples),
+  nd_df <- data.frame(exp = rep('ND', n_null_samples),
                       signcon.null_dist = sign_con_nde$null_dist)
-  qd_df$quid_bf <- 1/nde_bf
-  qd_df$pbt.MAP <- nde_pbt_res$MAP
-  qd_df$pbt.low <- nde_pbt_res$low
-  qd_df$pbt.high <- nde_pbt_res$high
-  qd_df$oanova.p <- nde_OANOVA_res$p
-  qd_df$signcon.p <- sign_con_nde$p
-  qd_df$signcon.statistic <- sign_con_nde$statistic
-  sim_data <- rbind(gn_df, qd_df)                      
+  nd_df$quid_bf <- 1/nde_bf
+  nd_df$pbt.MAP <- nde_pbt_res$MAP
+  nd_df$pbt.low <- nde_pbt_res$low
+  nd_df$pbt.high <- nde_pbt_res$high
+  nd_df$oanova.p <- nde_OANOVA_res$p
+  nd_df$signcon.p <- sign_con_nde$p
+  nd_df$signcon.statistic <- sign_con_nde$statistic
+  sim_data <- rbind(gn_df, nd_df)                      
   sim_data$is_sim <- TRUE
   sim_data$directional_test.p <- invalid_res
   sim_data$directional_test.statistic <- 0
@@ -71,7 +72,7 @@ generate_signcon_plot <- function(data, graphics_conf, alpha = .05) {
   effect_per_exp <- data %>%
     group_by(exp) %>%
     summarise(effect = first(effect)) %>%
-    pull(effect)
+    dplyr::pull(effect)
   exp_label_colors <- sapply(effect_per_exp, function(e) ifelse(e, graphics_conf$significant_color, 'black'))
   exp_label_face <- sapply(effect_per_exp, function(e) ifelse(e, "bold","plain"))
   highly_sig_markers_df <- data %>% 
@@ -84,7 +85,7 @@ generate_signcon_plot <- function(data, graphics_conf, alpha = .05) {
     summarise(sc = unique(stat), null_dist_id = sum(null), effect = unique(effect)) %>%
     mutate(exp = as.integer(exp))
   qf <- function(x,probs) {
-    scs %>% filter(null_dist_id == sum(x)) %>% pull(sc) %>% first()
+    scs %>% filter(null_dist_id == sum(x)) %>% dplyr::pull(sc) %>% first()
   }
   plt <- ggplot(data, aes(x = null, y = exp, fill = effect)) +
     geom_rect(data = data_sim_rect, 
@@ -107,8 +108,9 @@ generate_signcon_plot <- function(data, graphics_conf, alpha = .05) {
           plot.title = element_text(size = graphics_conf$title_size, hjust = 0,
                                     margin=margin(0,0,30,0)),
           axis.text = element_text(size = graphics_conf$x_text_size),
-          axis.text.x = element_text(size = graphics_conf$x_text_size, vjust = -.5,
-                                     colour = exp_label_colors, face = exp_label_face),
+          axis.text.x = element_text(size = graphics_conf$x_text_size, vjust = .1,
+                                     colour = exp_label_colors, face = exp_label_face,
+                                     angle = 45),
           axis.title = element_text(size = graphics_conf$x_title_size),
           axis.title.x = element_text(size = graphics_conf$x_title_size, vjust = -3),
           axis.title.y = element_text(margin = margin(t = 0, r = 5, b = 0, l = 0)),
@@ -168,15 +170,16 @@ generate_quid_plot <- function(data, graphics_conf, criteria = 3, eps = 10^-2) {
     theme_classic() +
     scale_fill_manual(breaks = c('effect','uncertain','ns'),
                       values=c(graphics_conf$significant_color,
-                               graphics_conf$med,
-                               graphics_conf$ns_color))+
+                               graphics_conf$med_color,
+                               graphics_conf$null_support_color))+
     theme(legend.position = 'none',
           plot.title = element_text(size = graphics_conf$title_size, hjust = 0,
                                     margin=margin(0,0,30,0)),
           axis.text = element_text(size = graphics_conf$x_text_size),
           axis.title = element_text(size = graphics_conf$x_title_size),
-          axis.text.x = element_text(size = graphics_conf$x_text_size, vjust = -.5,
-                                     colour = exp_label_colors, face = exp_label_face),
+          axis.text.x = element_text(size = graphics_conf$x_text_size, vjust = .1,
+                                     colour = exp_label_colors, face = exp_label_face,
+                                     angle = 45),
           axis.title.y = element_markdown(margin = margin(r = 25)),
           axis.title.x = element_text(size = graphics_conf$x_title_size, vjust = -3),
           plot.margin = (unit(c(.5, .5, 1, .5), "cm"))) +
@@ -242,8 +245,9 @@ generate_OANOVA_plot <- function(data, graphics_conf, alpha = .05, eps = 10^-3) 
                                     margin=margin(0,0,30,0)),
           axis.text = element_text(size = graphics_conf$x_text_size),
           axis.title = element_text(size = graphics_conf$x_title_size),
-          axis.text.x = element_text(size = graphics_conf$x_text_size, vjust = -.5,
-                                     colour = exp_label_colors, face = exp_label_face),
+          axis.text.x = element_text(size = graphics_conf$x_text_size, vjust = .1,
+                                     colour = exp_label_colors, face = exp_label_face,
+                                     angle = 45),
           axis.title.y = element_markdown(margin = margin(r = 25)),
           axis.title.x = element_text(size = graphics_conf$x_title_size, vjust = -3),
           plot.margin = (unit(c(.5, .5, 1, .5), "cm"))) +
@@ -285,7 +289,7 @@ generate_pbt_plot <- function(data, graphics_conf) {
     geom_point(aes(y = pbt.MAP*100), size = 5, colour = 'black', stroke =2,
                fill = ifelse(data$effect, graphics_conf$significant_color,
                              ifelse(data$pbt.MAP > 0,graphics_conf$med_color,
-                              graphics_conf$ns_color))) +
+                              graphics_conf$null_support_color))) +
     scale_shape_manual(values = graphics_conf$shapes_per_sim) +
     xlab('Experiment') +
     ylab('Estimated prevalence\nof within-subject effects (%)') +
@@ -293,13 +297,14 @@ generate_pbt_plot <- function(data, graphics_conf) {
     theme_classic() +
     scale_fill_manual(breaks = c(TRUE,FALSE),
                        values=c(graphics_conf$med_color,
-                                graphics_conf$ns_color))+
+                                graphics_conf$null_support_color))+
     theme(legend.position = 'none',
           plot.title = element_text(size = graphics_conf$title_size, hjust = 0,
                                     margin=margin(0,0,30,0)),
           axis.text = element_text(size = graphics_conf$x_text_size),
-          axis.text.x = element_text(size = graphics_conf$x_text_size, vjust = -.5,
-                                     colour = exp_label_colors, face = exp_label_face),
+          axis.text.x = element_text(size = graphics_conf$x_text_size, vjust = .1,
+                                     colour = exp_label_colors, face = exp_label_face,
+                                     angle = 45),
           axis.title = element_text(size = graphics_conf$x_title_size),
           axis.title.x = element_text(size = graphics_conf$x_title_size, vjust = -3),
           axis.title.y = element_text(margin = margin(t = 0, r = 17, b = 0, l = 0)),
@@ -406,10 +411,10 @@ dir_res_all <- results %>%
 ## Plots
 # configure the graphics of the figure
 graphics_conf <- list(title_size = 30, size_seg = 2,
-                      ns_color = 'white', significant_color = '#116897', 
-                      med_color = 'gray', pale_color = "#E9CB9A", 
+                      ns_color = 'gray', significant_color = '#116897', 
+                      null_support_color = 'white', med_color = 'gray', pale_color = "#E9CB9A", 
                       vline_size = 3, vline_color = '#4eaf4a',
-                      dist_below_color = '#dadada', dist_above_color = '#646464',
+                      dist_below_color = '#dadada', dist_above_color = '#dadada',
                       x_title_size = 22, 
                       x_text_size = 17, sim_rect_color = '#8A62A4', 
                       shapes_per_sim = list('TRUE' = 22, 'FALSE' = 21),
@@ -461,13 +466,13 @@ ns_n_effect_QUID <- sum(ns_quid_res$quid_bf > bf_criteria)
 ns_n_null_QUID <- sum(ns_quid_res$quid_bf < 1/bf_criteria)
 paste('NS Effects (QUID):')
 paste('Max, Med =', max(ns_quid_res$quid_bf), median(ns_quid_res$quid_bf))
-inconclusive <- ns_quid_res$quid_bf[(ns_quid_res$quid_bf >= 1/bf_criteria) &
+ns_inconclusive <- ns_quid_res$quid_bf[(ns_quid_res$quid_bf >= 1/bf_criteria) &
                                    (ns_quid_res$quid_bf <= bf_criteria)]
 effect_n_effect_QUID <- sum(effect_quid_res$quid_bf > bf_criteria)
 effect_n_null_QUID <- sum(effect_quid_res$quid_bf < 1/bf_criteria)
 paste('Directional Effects (QUID):')
 paste('Max, Med =', max(effect_quid_res$quid_bf), median(effect_quid_res$quid_bf))
-inconclusive <- effect_quid_res$quid_bf[(effect_quid_res$quid_bf >= 1/bf_criteria) &
+effect_inconclusive <- effect_quid_res$quid_bf[(effect_quid_res$quid_bf >= 1/bf_criteria) &
                                       (effect_quid_res$quid_bf <= bf_criteria)]
 # generate the OANOVA test sub-plot
 graphics_conf$title <- 'Omnibus ANOVA Test (OANOVA)'
