@@ -178,9 +178,9 @@ generate_agg_plot <- function(data, graphics_conf, fn, rng_ratio = -1) {
 }
 
 # configure the graphics of the plot
-graphics_conf <- list(size_seg = 2, color_spreading_lines = '#71E9CC',
+graphics_conf <- list(size_seg = 2, color_spreading_lines = '#B1C2CF',
                       margin_y_subj = 0.5, margin_y_conds = 0.125, legnth_med = 2,
-                      incong_color = 'black', cong_color = 'red', med_color = 'gray',
+                      incong_color = '#e41a1c', cong_color = '#377eb8', med_color = 'gray',
                       vline_size = 1, x_title_size = 22, x_text_size = 20)
 # for illustration, add an RT offset
 offset_rt <- 650
