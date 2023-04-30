@@ -309,7 +309,7 @@ apa_table(
   studies_df,
   caption = "Unconscious processing effects metadata",
   align = c("p{2.5cm}", "p{1.5cm}", "p{2cm}", "p{0.8cm}", "p{7cm}"),
-  font_size = 'footnotesize'))
+  font_size = 'footnotesize')
 ```
 
 \newpage
