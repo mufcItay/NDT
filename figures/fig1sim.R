@@ -239,6 +239,7 @@ nde_pbt_res <- run_pbt(nde_data, test_function = t_f)
 sn_pbt_res <- run_pbt(sn_data, test_function = t_f)
 
 # OANOVA Test
+oanova_alpha <- .05
 source('datasets_analysis\\oanova_test.R')
 nde_OANOVA_res <- run_oanova_test(nde_data)
 sn_OANOVA_res <- run_oanova_test(sn_data)

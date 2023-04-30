@@ -107,7 +107,7 @@ save_results <- function(results, postfix) {
 
 # the function saves the plot to file according to a fixed format
 save_plot <- function(plot, fn) {
-  ggsave(paste(apdx_fld, paste0(fn,'.svg'), sep = .Platform$file.sep),
+  ggsave(paste(apdx_fld, paste0(fn,'.png'), sep = .Platform$file.sep),
          width=15, height=12,plot = plot)
 }
 

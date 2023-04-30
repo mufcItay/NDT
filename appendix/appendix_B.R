@@ -32,54 +32,64 @@ power_analysis <- function(conf, params, df, seed) {
   return(c(res_sc[c('p', 'statistic')], 
     res_pbt[c('low', 'high', 'MAP')]))
 }
-# get the power analysis results
-results_df <- run_simulation(conf, power_analysis)
 
-# create a summary data frame for the results:
-# count significant sign-consistency and HDI excludes zero (for PBT)
-alpha <- .05
-# data frame structure:
-# (condition) X (sign-consistency significance,  PBT's HDI exceeds zero)
-results_summary <- results_df %>%
-  mutate(SC = sc_p <= alpha,
-         PBT = pbt_low_hdi95 > 0,
-         N_t = N_t *2) %>% # switch from trials per condition to total #trials
-  group_by(mu, N_p, N_t) %>%
-  summarise_all(mean) %>%
-  gather(Test, Power, SC:PBT)
-# save the summary of the results to file
-save_results(results_summary, 'Appendix_B')
+# run both simulations
+run_appendixB <- function() {
+  # get the power analysis results
+  results_df <- run_simulation(conf, power_analysis)
+  
+  # create a summary data frame for the results:
+  # count significant sign-consistency and HDI excludes zero (for PBT)
+  alpha <- .05
+  # data frame structure:
+  # (condition) X (sign-consistency significance,  PBT's HDI exceeds zero)
+  results_summary <- results_df %>%
+    mutate(SC = sc_p <= alpha,
+           PBT = pbt_low_hdi95 > 0,
+           N_t = N_t *2) %>% # switch from trials per condition to total #trials
+    group_by(mu, N_p, N_t) %>%
+    summarise_all(mean) %>%
+    gather(Test, Power, SC:PBT)
+  # save the summary of the results to file
+  save_results(results_summary, 'Appendix_B')
+  return(results_summary)
+}
 
-# plot the results
-plt_appendix_B <- results_summary %>%
-  mutate(Power = round(100 * Power),
-         Test = factor(Test),
-         mu = factor(ifelse(mu == 0, 'Qualitative differences',
-                            'Directional effect ')),
-         N_p = factor(N_p),
-         N_t = factor(N_t)) %>%
-  ggplot(aes(fill=Power, 
-             x = N_p, y = N_t)) +
-  geom_tile(colour = 'black', linewidth = .5) +
-  geom_text(aes(label = as.character(Power)),
-            size = 7, color = 'black') +
-  theme_minimal() + 
-  xlab(expression(N[p])) +
-  ylab(expression(N[t])) + 
-  scale_fill_gradientn(colors=c('red',"grey", 'blue'),
-                       guide = 'colorbar') +
-  facet_grid(vars(Test), vars(mu)) +
-  theme(strip.background = element_rect(fill = "white"),
-        strip.text = element_text(color = 'black', size = 26),
-        axis.title = element_text(size = 26),
-        axis.text = element_text(size = 22),
-        panel.grid = element_blank(),
-        legend.title=element_text(size=26),
-        legend.text = element_text(size=22),
-        legend.position = 'bottom',
-        strip.placement = "outside",
-        panel.spacing=unit(.5, "lines")) +
-  guides(fill = guide_colourbar(barwidth = 20,
-                                title="Power (%)"))
-# save the plot
-save_plot(plt_appendix_B, fn = 'Appendix_B')
+save_plot_appendix_B <- function(results_summary) {
+  # plot the results
+  plt_appendix_B <- results_summary %>%
+    mutate(Power = round(100 * Power),
+           Test = factor(Test),
+           mu = factor(ifelse(mu == 0, 'Qualitative differences',
+                              'Directional effect ')),
+           N_p = factor(N_p),
+           N_t = factor(N_t)) %>%
+    ggplot(aes(fill=Power, 
+               x = N_p, y = N_t)) +
+    geom_tile(colour = 'black', linewidth = .5) +
+    geom_text(aes(label = as.character(Power)),
+              size = 7, color = 'black') +
+    theme_minimal() + 
+    xlab(expression(N[p])) +
+    ylab(expression(N[t])) + 
+    scale_fill_gradientn(colors=c('red',"grey", 'blue'),
+                         guide = 'colorbar') +
+    facet_grid(vars(Test), vars(mu)) +
+    theme(strip.background = element_rect(fill = "white"),
+          strip.text = element_text(color = 'black', size = 26),
+          axis.title = element_text(size = 26),
+          axis.text = element_text(size = 22),
+          panel.grid = element_blank(),
+          legend.title=element_text(size=26),
+          legend.text = element_text(size=22),
+          legend.position = 'bottom',
+          strip.placement = "outside",
+          panel.spacing=unit(.5, "lines")) +
+    guides(fill = guide_colourbar(barwidth = 20,
+                                  title="Power (%)"))
+  # save the plot
+  save_plot(plt_appendix_B, fn = 'Appendix_B')
+  return(plt_appendix_B)
+}
+
+
