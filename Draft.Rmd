@@ -315,7 +315,7 @@ apa_table(
 \newpage
 
 
-# Supplementary Figure 1 - PBT & QUID results for datasets showing a directional effect {#SFig-1}
+# Supplementary Figure 1 - PBT, QUID and OANOVA results for datasets showing a directional effect {#SFig-1}
 
 (ref:sfigure1-caption)  Supplementary Figure 1. The results of applying the PBT (A), QUID (B) and OANOVA (C) tests to effects that produced significant results in a non-parametric directional test. Same conventions as Fig. 2.
 ```{r Sfigure1, out.width="100%", fig.cap="\\label{fig:figures1}(ref:sfigure1-caption)", warning = FALSE}
