@@ -39,7 +39,7 @@ get_cluster <- function(n_cores_from_max = 1) {
   parallel::clusterExport(cluster, c("generate_dataset", "run_quid", "run_pbt",
                                      "quid", "prep.models", "make.bf", "prior.p.greater",
                                      "pbt_test_f", "bayesprev_hpdi", "bayesprev_map",
-                                     "run_oanova_test"))
+                                     "run_oanova_test","base_oanova_test"))
   doParallel::registerDoParallel(cl = cluster)
   return(cluster)
 }

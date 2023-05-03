@@ -1,20 +1,5 @@
 library(dplyr)
 
-#main effect
-# full model:
-# y = mu = A + S + A:S + e
-main_effect_model <- formula('dv ~ iv + idv + iv:idv')
-# null model:
-# y = mu + S + e
-main_effect_null_model <- formula('dv ~ idv')
-
-# interaction
-# full model:
-# y = mu = A + B + S + AB + SA + SB + SAB + e
-interaction_model <- formula('dv ~ iv + iv2 + idv + iv:iv2 + iv:idv + iv2:idv + idv:iv:iv2')
-# null model:
-# y = mu + A + B + S + SA + SB + e
-interaction_null_model <- formula('dv ~ iv + iv2 + idv + iv:idv + iv2:idv')
 
 run_oanova_test <- function(data) {
   data$idv <- factor(data$idv)
@@ -25,6 +10,22 @@ run_oanova_test <- function(data) {
   if(is_accuracy_efect) { 
     return (list(F = INVALID_VALUE_CODE, p = INVALID_VALUE_CODE))
   }
+  
+  #main effect
+  # full model:
+  # y = mu = A + S + A:S + e
+  main_effect_model <- formula('dv ~ iv + idv + iv:idv')
+  # null model:
+  # y = mu + S + e
+  main_effect_null_model <- formula('dv ~ idv')
+  
+  # interaction
+  # full model:
+  # y = mu = A + B + S + AB + SA + SB + SAB + e
+  interaction_model <- formula('dv ~ iv + iv2 + idv + iv:iv2 + iv:idv + iv2:idv + idv:iv:iv2')
+  # null model:
+  # y = mu + A + B + S + SA + SB + e
+  interaction_null_model <- formula('dv ~ iv + iv2 + idv + iv:idv + iv2:idv')
   
   is_interaction_effect <- length(unique(data$iv2)) > 1 
   if(is_interaction_effect) {

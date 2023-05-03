@@ -21,7 +21,7 @@ results_cols <- c(paste('sc', c('p','stat'),sep = '_'),
                   paste('pbt', c('low_hdi95', 'high_hdi95', 'MAP'),sep = '_'))
 # note that we feed the initialization function with N_t /2 because it expects
 # the number of trials per condition (we use two conditions)
-conf <- initialize_simulation(N_p, N_t/2, sigma_b, sigma_w, mu, max_seed, 
+appendix_b_conf <- initialize_simulation(N_p, N_t/2, sigma_b, sigma_w, mu, max_seed, 
                               results_cols = results_cols)
 # define the power analysis function
 power_analysis <- function(conf, params, df, seed) {
@@ -34,7 +34,7 @@ power_analysis <- function(conf, params, df, seed) {
 }
 
 # run both simulations
-run_appendixB <- function() {
+run_appendixB <- function(conf) {
   # get the power analysis results
   results_df <- run_simulation(conf, power_analysis)
   
