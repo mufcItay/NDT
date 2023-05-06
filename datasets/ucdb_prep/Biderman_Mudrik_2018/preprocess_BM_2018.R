@@ -126,7 +126,7 @@ getTibble <- function(exp, isPostTest = F) {
   # read the data and convert it to a tibble for easier data manipulations
   data <- readMat(path)
   df <- data.frame(data)
-  tib <- as.tibble(df)
+  tib <- as_tibble(df)
   names(tib) <- columnNames
   return (tib)
 }

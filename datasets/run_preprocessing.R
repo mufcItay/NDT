@@ -1,3 +1,17 @@
+library(groundhog)
+groundhog.library(c(
+  'dplyr',
+  'R.matlab',
+  'readxl',
+  'tidyverse',
+  'data.table',
+  'tidyr',
+  'reshape2',
+  'foreign',
+  'readstata13',
+  'doBy',
+  'nleqslv'), '2023-04-10')
+
 datasets_dir <- 'datasets'
 datasets_analysis_dir <- 'datasets_analysis' 
 prep_prefix <- 'prep'

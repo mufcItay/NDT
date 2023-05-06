@@ -6,7 +6,7 @@ apdx_fld <- 'appendix'
 source(paste(apdx_fld, 'appendix_utils.R', sep = .Platform$file.sep))
 
 #define alpha
-alpha <- 0.05
+apndxA_alpha <- 0.05
 
 ## define the common simulation parameters
 results_cols <- c('QUID', 'OANOVA')
@@ -21,17 +21,18 @@ mu <- 0
 # defines the number of simulations
 max_seed <- 100
 # calculate expected CI for p=.05
-random_binom_CI_alpha <- qbinom(c(alpha/2,1-alpha/2), max_seed, alpha)
+random_binom_CI_alpha <- qbinom(c(apndxA_alpha/2,1-apndxA_alpha/2), 
+                                max_seed, apndxA_alpha)
 ## define the specific simulation parameters
 # FAs simulation
 N_p_FAs <- 100
 sigma_b_FAs = 0
-conf_FAs <- initialize_simulation(N_p_FAs, N_t, sigma_b_FAs, sigma_w, mu, 
+apndxA_conf_FAs <- initialize_simulation(N_p_FAs, N_t, sigma_b_FAs, sigma_w, mu, 
                                   max_seed, results_cols)
 # Sensitivity simulation
 N_p_sensitivity <- 30
 sigma_b_sensitivity = 15
-conf_sensitivity <- initialize_simulation(N_p_sensitivity, N_t, 
+apndxA_conf_sensitivity <- initialize_simulation(N_p_sensitivity, N_t, 
                                           sigma_b_sensitivity, sigma_w, mu, 
                                           max_seed, results_cols)
 
@@ -86,7 +87,7 @@ analyze_appendix_A <- function(results_df, alpha = .05, bf_criteria = 3) {
                                 ifelse(Result_QUID >= bf_criteria_high, 'H1',
                                        'Inconclusive'))) %>%
     group_by(Analysis, Condition,sig_QUID) %>%
-    summarise(sig_prop = 100 * n() / max_seed)
+    summarise(sig_prop = 100 * n() / max(results_df$seeds))
 
   # analyze the OANOVA test's results (% of iterations with significant effects in 
   # each analysis X condition combination)
@@ -94,7 +95,7 @@ analyze_appendix_A <- function(results_df, alpha = .05, bf_criteria = 3) {
     group_by(Analysis, Condition) %>%
     summarise(sig_OANOVA = Result_OANOVA <= alpha) %>%
     group_by(Analysis, Condition,sig_OANOVA) %>%
-    summarise(sig_prop = 100 * n() / max_seed)
+    summarise(sig_prop = 100 * n() / max(results_df$seeds))
 
   return(list(quid_res = analysis_quid, oanova_res = analysis_OANOVA))
 }

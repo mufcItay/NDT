@@ -17,13 +17,13 @@ author:
 
 affiliation:
   - id            : "1"
-    institution   : "Sagol school of neuroscience, Tel Aviv University"
+    institution   : "Sagol School of Neuroscience, Tel Aviv University"
   - id            : "2"
-    institution   : "University Grenoble Alpes, University Savoie Mont Blanc"
+    institution   : "University Grenoble Alpes, University Savoie Mont Blanc, CNRS, LPNC"
   - id            : "3"
     institution   : "School of Psychological Sciences, Tel Aviv University"
   - id            : "4"
-    institution   : "Birkbeck, University of London"
+    institution   : "Department of Psychological Sciences, Birkbeck, University of London"
   - id            : "5"
     institution   : "Wellcome Centre for Human Neuroimaging, UCL"
 
@@ -95,6 +95,7 @@ groundhog.library(c(
   'scales',
   'dplyr',
   'tidyr',
+  'pracma',
   'patchwork',
   'HDInterval',
   'MCMCpack',
@@ -109,42 +110,58 @@ source('datasets_analysis\\definitions.R')
 
 ```{r run-analyses, include=FALSE}
 # run all analyses. The outputs are later used in the script
+# to preprocess all datasets source the preprocessing script,
+# sourcing this script will also download the up-to-date versiob of the confidence database from OSF (not the version used for analysis in this paper).
+# source('datasets\\run_preprocessing.R')
+# run all analysis on the preprocessed datasets
 source('datasets_analysis\\run_all_analyses.R')
 
-# sourcing the 'fig1sim' script generates the panels populating Figure 1 in the
-# manuscript, and analyzes the simulated data with all available non-directional
+# sourcing the 'fig1sim' script generates the panels populating Figure 1 in the manuscript, and analyzes the simulated data with all available non-directional (here we used an edited version of this panels)
 # tests, and t-tests.
 source('figures\\fig1sim.R')
-# sourcing the 'fig2_3' script generates figure2,4 and supplementary figure 1,2
-# it also analyzes the results of all datasets according to all tests
+# sourcing the 'fig2_3' script generates figure 2, the lower panel of figure 3, and supplementary figure 1,2 (note that figure 3 was edited to also include the illustration in the upper panel of figure 3)
+# it also analyzes the results of all unconscious processing datasets according to all tests
 source('figures\\fig2_3.R')
-# sourcing the 'fig4' script generates figure4.
-# it also analyzes the results of all datasets according to all tests
+# sourcing the 'fig4' script generates figure 4 (minor edits were applied to the resulting svg figure).
+# it also analyzes the results of all datasets (including datasets from non-UC domains) according to the sign-consistency test.
 source('figures\\fig4.R')
-source('appendix\\appendix_A.R')
-appendix_A_res <- run_appendixA(conf_FAs, conf_sensitivity)
 
-#run the analysis to reproduce the output file. Here we just load the analyzed file
+# the analysis and simulations for appendix A.
+# to run the analysis again, uncomment the (commented) run_appendixA line and comment the read.csv line which reads the results of an existing simulations run.
+source('appendix\\appendix_A.R')
+appendixA_res <- run_appendixA(apndxA_conf_FAs, apndxA_conf_sensitivity)
+# appendixA_res <- read.csv('appendix\\results\\2023-05-04_12_33_43Appendix_A_QUID_OANOVA.csv')
+
+# the analysis and simulations for appendix B.
+# to run the analysis again, uncomment the (commented) run_appendixB line and comment the read.csv line which reads the results of an existing simulations run (keeping the save_plot_appendixB line.
 source('appendix\\appendix_B.R')
-appendix_B_res <- run_appendixB(appendix_b_conf)
-save_results_plot(appendix_B_res$summary)
+appendixB_res <- run_appendixB(apndx_b_conf)
+# appendixB_res <- read.csv('appendix\\results\\2023-05-05_04_27_22Appendix_B.csv')
+save_plot_appendixB(appendixB_res)
 ```
 
 ```{r abstract-code, include=FALSE}
+# we used fixed numbers on the abstract, here is the code to recreate them.
+
+# get the number of partcipants and effects in the ucdb
 ucdb_conf <- init_analysis(Unconscious_Processing_analysis_lbl)
 ucdb_dfs <- get_input_df(ucdb_conf)
 res_summary_fn <- 'Unconscious Processing_Results.csv'
 results_fld <- 'results'
 alpha <- .05
+# read the ucdb results file
 results <- read.csv(paste(results_fld, res_summary_fn, sep=.Platform$file.sep))
+# filter the number of ns (nonsignificant) directional effects
 ns_results <- results[results$directional_test.p > alpha,]
 N_ns <- length(unique(ns_results$exp))
 directional_effect_datasets <- setdiff(unique(results$exp), unique(ns_results$exp))
+# count participants
 ns_N_participants <- ucdb_dfs %>%
   group_by(exp) %>%
   filter(!exp %in% directional_effect_datasets) %>% 
   summarise(n = length(unique(idv)))
-# removing experiments where the same effect
+# removing experiments where the same participants were included in different
+# effects
 N_unique_participants <- sum(ns_N_participants %>% 
          filter(!exp %in% c('Faivre et al._1_incong', 'Faivre et al._3_incong', 
                             'Faivre et al._4_incong', 'Hurme et al_2020_TMS_Red', 
@@ -170,11 +187,11 @@ On the face of it, pronounced individual differences in unconscious processing e
 
 The paper proceeds as follows. We first simulate a setting where a strong effect of unconscious processing on behaviour is entirely missed in standard analysis, due to pronounced inter-individual differences. We then show that the same effect is revealed when using three tests that are robust to population variability: Bayesian prevalence analysis [@ince2021a; @ince2022a], Bayesian hierarchical modelling [@haaf2019a], and a frequentist test based on analysis of variance (ANOVA; @miller2018a). When applied to data gathered from eight unconscious processing studies (reporting 26 non-significant effects), the same three tests support the null hypothesis according to which the behaviour of individual participants is unaffected by unconscious perception. This strengthens claims for a true absence of an effect in these studies. Finally, we propose a non-parametric alternative that provides improved sensitivity and specificity, avoiding potentially unjustified statistical assumptions regarding the data-generating process. Our test successfully reveals effects on multisensory integration, visual search, and confidence ratings that could not be detected using a standard directional analysis. However, similar to the three other approaches, it reveals no effects when applied to the studies of unconscious processing examined here. We conclude that existing data are most consistent with the absence of influences of unconscious stimuli on cognition, not only at the population, but also at the single-participant level. 
 
-# Simulating qualitative differences in unconscious effects 
+# Simulating non-directional unconscious effects 
 
 To demonstrate how true causal effects of unconscious processing can be masked by inter-individual differences in effect signs, we simulated a typical experiment using a within-participants manipulation  (Figure 1). Specifically, we generated trial-by-trial data from a standard unconscious priming experiment. For each simulated participant, we generated reaction time data from two conditions (corresponding to congruent and incongruent primes in unconscious processing studies). Individual-level effect sizes (in milliseconds) were sampled from a normal distribution centred at zero ($e_{i} \sim {\mathcal{N}}(0, \sigma_{b})$, where $e_{i}$ denotes the true effect size of the ith participant and ($\sigma_b$) the between-participant standard deviation. Then, the trial-by-trial reaction times (RTs) of each participant and condition were generated according to each participant''s true effect score ($e_{i}$), the relevant condition ($c \in \{1, 0\}$, where $c=1$ denotes the incongruent condition, and $c=0$ denotes the congruent condition), and the within-participant standard deviation ($\sigma_{w}$) ($RT_{i,c} \sim {\mathcal{N}} (0, \sigma_{w}) +c*e_{i}$).
 In two simulations, we manipulated two factors: the between-participant SD over effect sizes ($\sigma_{b}$), and the within-participant standard deviation (SD) over RTs within each condition ($\sigma_{w}$). This resulted in two distinct scenarios under this framework: (1) a *qualitative or non-directional differences scenario*, where all individuals show an effect, but individual-level effects largely vary in magnitude and sign  ($\sigma_{b}$=`r nde_sd_b`, $\sigma_{w}$=`r nde_sd_w`; Figure 1B)), and (2) a *global null* scenario [@allefeld2016a; @nichols2005a], where no single participant is affected by the experimental manipulation ($\sigma_{b}$=`r sn_sd_b`, $\sigma_{w}$= `r sn_sd_w`; Figure 1C). We simulated $N_{t}$=`r 2*sn_trials` trials from $N_{p}$=`r sn_n`  per scenario, noting that the general principle holds for other sample sizes and number of trials.
-First, we analyzed this simulated data using a two-sided paired t-test on the differences in mean RTs between the two conditions. This is the standard protocol for testing if unconscious processing took place. In both simulations, we obtained a null result, revealing no evidence for a difference in RT between the congruent and incongruent conditions (*qualitative differences*: `r apa_print(nde_t_test)$full_result`; *global null*: `r apa_print(sn_t_test)$full_result`). Importantly, in the *non-directional differences* simulation, all participants were affected by the experimental manipulation (that is, their true effect sizes were different from zero). Thus, this commonly used approach systematically misses true causal effects of the experimental manipulation whenever they are inconsistent between participants.
+First, we analyzed this simulated data using a two-sided paired t-test on the differences in mean RTs between the two conditions. This is the standard protocol for testing if unconscious processing took place. In both simulations, we obtained a null result, revealing no evidence for a difference in RT between the congruent and incongruent conditions (*non-directional differences*: `r apa_print(nde_t_test)$full_result`; *global null*: `r apa_print(sn_t_test)$full_result`). Importantly, in the *non-directional differences* simulation, all participants were affected by the experimental manipulation (that is, their true effect sizes were different from zero). Thus, this commonly used approach systematically misses true causal effects of the experimental manipulation whenever they are inconsistent between participants.
 To reiterate, a standard t-test misses existing individual-level effects because, operating on individual-level summary statistics, it is oblivious to within-participant variability in the dependent variable. In recent years, researchers sought to address this limitation, advocating for the use of statistical methods that incorporate both within and between-participant variability. Specifically, three approaches were proposed. First, the *prevalence Bayesian test* approach (@ince2021a; @ince2022a; henceforth PBT) estimates the prevalence of individual-level effects in a given population (the proportion of individuals showing an effect). The prevalence approach relies on a two stages procedure in which effects are tested at the individual level using a standard hypothesis-testing approach, and the true proportion of significant effects is then estimated using a Bayesian parameter estimation procedure. Second, the *qualitative individual differences* approach (@rouder2020a; @rouder2021a; @haaf2019a; henceforth QUID) quantifies the relative support for the presence of “qualitative differences” in effects, that is, inter-individual differences in effect signs, by performing a Bayesian model comparison over a family of hierarchical models with different constraints [@haaf2019a]. Third, Miller & Schwarz [-@miller2018a] introduce a parametric and frequentist test, based on ANOVA. Specifically, their Omnibus ANOVA test (henceforth OANOVA) tests the joint null hypothesis that there are no systematic differences between experimental conditions across individuals, or within individuals and across trials. Together, this is equivalent to the *global null* scenario we presented above.
 We applied the tests to our simulated data, using the default priors from the original publications [@ince2021a; @rouder2021a], and an implementation of the ANOVA model underlying the OANOVA test (@miller2018a; see ([https://github.com/mufcItay/NDT](https://github.com/mufcItay/NDT)) for an R based implementation of the test). We considered $BF>`r bf_criteria`$ as evidence for an effect, $BF< \frac{1}{`r bf_criteria`}$ as evidence for no effect (*global null*), and values between these thresholds ($\frac{1}{`r bf_criteria`}\leq BF\leq `r bf_criteria`$) as inconclusive [@jeffreys1998a], and used an  $\alpha$ of `r oanova_alpha` for the OANOVA test. Reassuringly, all tests were able to differentiate between the two simulated scenarios, providing very strong evidence for an effect in the *non-directional differences* scenario, but not in the *global null* one. Specifically, According to PBT, about half of the population was estimated to show an effect of congruency on RT in the *non-directional differences* simulation (using a two-sided t-test for the individual-level test; $HDI_{95}$= [`r round(100*nde_pbt_res$low, 0)`, `r round(100*nde_pbt_res$high,0)`], $MAP$=`r round(100*nde_pbt_res$MAP,)`%; the 95% highest density interval and maximum a posteriori, respectively), but this proportion was not reliably different from zero in the *global null* simulation ($HDI_{95}$= [`r round(100*sn_pbt_res$low,0)`, `r round(100*sn_pbt_res$high,0)`], $MAP$= `r round(100*sn_pbt_res$MAP,0)`%). Using the QUID method, a random effects model with individual-level effects was overwhelmingly preferred in the *non-directional differences* simulation ($BF$= `r formatC(nde_bf, format = 'e', 2)`), but a null model was preferred in the *global null* simulation ($BF$= `r round(sn_bf,2)`). Similarly, the OANOVA test revealed significant results in the *non-directional differences* scenario (F(`r nde_OANOVA_res$df_num`, `r nde_OANOVA_res$df_denom`) = `r round(nde_OANOVA_res$F,2)`, p `r paste0(ifelse(nde_OANOVA_res$p >= .001, '=', ''), apa_p(nde_OANOVA_res$p))`), and a nonsignificant effect in the *global null* simulation (F(`r sn_OANOVA_res$df_num`, `r sn_OANOVA_res$df_denom`) = `r round(sn_OANOVA_res$F,2)`, p `r paste0(ifelse(sn_OANOVA_res$p >= .001, '=', ''),apa_p(sn_OANOVA_res$p))`).
 The simulations above demonstrate that adopting a non-directional approach, that is, an approach that takes into account the potential for opposite true effect signs among different participants, has the potential to reveal individual-level effects that would otherwise be missed due to high between-participant variability. Equipped with these validated tools, in the next section we use the QUID, PBT, and OANOVA tests to ask whether null results in the field of unconscious processing are driven by such inter-individual variability, or alternatively, whether they reflect the true absence of a causal effect.
@@ -186,11 +203,14 @@ knitr::include_graphics("figures//figure1.png")
 
 # Reexamining unconscious effects within the Bayesian framework
 ```{r empiric-all-tests, include=FALSE}
+# get the counts of experiments for the section (uc datasets), reading from the enviroment created by soucing the fig2_3.R script
 n_empiric_ns <- uc_ns_results %>% filter(is_sim == FALSE) %>% pull(exp) %>% unique() %>% length()
 n_empiric_ns_quid <- ns_quid_res %>% filter(is_sim == FALSE) %>% pull(exp) %>% unique() %>% length()
 n_empiric_ns_oanova <- ns_OANOVA_res %>% filter(is_sim == FALSE) %>% pull(exp) %>% unique() %>% length()
 p_pbt_MAP_zero <- ns_pbt_res %>% filter(is_sim == FALSE, pbt.MAP == 0)%>% pull(exp) %>% unique() %>% length() / n_empiric_ns
 p_null_QUID <- ns_quid_res %>% filter(is_sim == FALSE, quid_bf < 1/bf_criteria)%>% pull(exp) %>% unique() %>% length() / n_empiric_ns_quid
+# get the results of individual experiments with significant sign-consistency.
+# in the results data frame there are multiple lines per exp (listing the null distribution per experiment). We average across rows to get the repeating statistics per experiment.
 res_per_exp <- uc_ns_results %>% group_by(exp) %>% summarise_all(mean)
 skora_1_res <- res_per_exp %>% filter(exp == 'S1')
 bm_3_res <- res_per_exp %>% filter(exp == 'BM3')
@@ -227,6 +247,7 @@ Thus, three different analysis methods support the conclusion that by and large,
 
 # Testing within-participant sign-consistency across experimental psychology studies
 ```{r other-domains-tests, include=FALSE}
+# get the counts of experiments for the section (from all domains), reading from the enviroment created by soucing the fig4.R script
 N_ns_no_UC <- sum(ns_sum_Ns %>% 
                     filter(type != "Unconscious Processing") %>% 
                     dplyr::pull(N))
@@ -249,11 +270,13 @@ N_ns_Social <- N_ns_psycog %>% filter(sub_cat == 'Social') %>% pull(n)
 battich_res <- null_results %>% filter(startsWith(exp, 'Battich'))
 ns_adam_res <- null_results %>% 
   filter(startsWith(exp,'Adam'), directional_test.p > alpha, signcon.p <= alpha)
-# battich t-tests (directional)
+
+# for the multisensory experiment (Battich et al.), we also examine whether the results can be explained by a directional order effect
+# read the whole dataset
 battich_data <- read.csv("datasets\\cogdb\\Battich_etal_2021.csv")
-## test for difference in effects between halves
+# test for difference in effects between halves (we included only the individual and joint attention condition, so halves = blocks)
 compare_halves <- function(data, exp_label) {
-  library(signcon)
+  # get the directional effect for each of the halves
   res_1st <- get_directional_effect(data %>% 
                                        filter(exp == exp_label, half == 1),
                                      idv = 'idv', iv = 'iv2', dv ='dv')
@@ -262,9 +285,10 @@ compare_halves <- function(data, exp_label) {
                                        filter(exp == exp_label, half == 2),
                                      idv = 'idv', iv = 'iv2', dv ='dv')
   scores_2nd = res_2nd$effect_per_id$score
+  # use a t-test to compare effect scores between halves (is there a condition-order effect?)
   return(t.test(scores_1st, scores_2nd,paired = TRUE))
 }
-
+# test for a directional condition-order effect in all of the cases where a non-directional effect was found (three cases our of four) 
 res_battich_resp1_t <- compare_halves(battich_data[battich_data$exp == battich_res$exp[1],], battich_res$exp[1])
 res_battich_resp2_t <- compare_halves(battich_data[battich_data$exp == battich_res$exp[2],], battich_res$exp[2])
 res_battich_rt2_t <- compare_halves(battich_data[battich_data$exp == battich_res$exp[3],], battich_res$exp[3])
@@ -307,6 +331,7 @@ Experimental demonstrations of unconscious processing have been reported for nea
 \newpage
 # Supplementary Table 1 {#STable-1}
 ``` {r supptable-1}
+# create the supplementary table by code
 Study <- c('Biderman & Mudrik, 2018', 'Faivre et al., 2014', 'Stein & Peelen, 2021', 
 'Zerweck et al., 2021', 'Benthien & Hesselmann, 2021', 'Hurme et al., 2020', 
 'Skora et al., 2021', 'Chien et al., 2022')
@@ -324,10 +349,10 @@ Notes <- c('Replication study. For all experiments, log(RT) was used in the orig
 'Regression to the mean as a confound according to authors',
 'Word, Picture, and trait discrimination tasks')
 studies_df <- data.frame(Study, Labels, Topic, DV, Notes)
+# print the table according to apa style using a small font size
 apa_table(
   studies_df,
   caption = "Unconscious processing effects metadata",
-  # align = c("l{2.5cm}", "l{1.5cm}", "l{2cm}", "l{0.8cm}", "l{7cm}"),
   font_size = 'footnotesize')
 ```
 
@@ -344,7 +369,7 @@ knitr::include_graphics("figures//plots//effect_available_methods_res.png")
 \newpage
 
 # Supplementary Figure 2 - Sign-Consistency test results for datasets showing a directional effect
-(ref:sfigure2caption) Supplementary Figure 2. The results of applying the Sign-Consistency test to significant directional effects (N = 7). The x-axis lists effect labels. Same conventions as Fig. 4.
+(ref:sfigure2caption) Supplementary Figure 2. The results of applying the Sign-Consistency test to significant directional effects (N = 7). The x-axis lists effect labels. Same conventions as Fig. 3.
 ```{r sfigure2, out.width="100%", fig.cap = "(ref:sfigure2caption)", warning = FALSE}
 knitr::include_graphics("figures//plots//effect_plt_sign_con__res.png")
 ```
@@ -352,25 +377,49 @@ knitr::include_graphics("figures//plots//effect_plt_sign_con__res.png")
 \newpage
 
 ``` {r appendix-A, warning = FALSE}
-# run the analysis to reproduce the output file. Here we just load the analyzed file
-# appendix_A_res <- read.csv('appendix\\results\\2023-05-02_11_32_45Appendix_A_QUID_OANOVA.csv')
-appendix_A_analysis <- analyze_appendix_A(appendix_A_res)
+# use the results of running the appendixA script above, analyze the results for QUID and OANOVA separetly
+appendix_A_analysis <- analyze_appendix_A(appendixA_res)
 quid_apndx_res <- appendix_A_analysis$quid_res
 oanova_apndx_res <- appendix_A_analysis$oanova_res
+# extract simulation paramters for each scenario (FAs and Sensitivity analysis)
+apndxA_sigma_w_low <- min(apndxA_conf_FAs$params$sigma_w)
+apndxA_sigma_w_unequal <- max(apndxA_conf_FAs$params$sigma_w)
+apndxA_FA_sigma_b <- dplyr::first(apndxA_conf_FAs$params$sigma_b)
+apndxA_sensitivity_sigma_b <- dplyr::first(apndxA_conf_sensitivity$params$sigma_b)
+apndxA_FA_Np <- dplyr::first(apndxA_conf_FAs$params$N_p)
+apndxA_sensitivity_Np <- dplyr::first(apndxA_conf_sensitivity$params$N_p) 
+apndxA_mu <- dplyr::first(apndxA_conf_FAs$params$mu)
+# we multiply by 2 because the simulation expects number of trials per condition and we report the total amount of trials
+apndxA_Nt <- 2 * dplyr::first(apndxA_conf_FAs$params$N_t)
+apndxA_iterations <- max(apndxA_conf_FAs$results$seeds)
 ```
 
 # Appendix A. Violating the equal within-individuals variance assumption {#Apndx-A}
-We used the simulation scheme described in the main text (see section ‘Simulating qualitative differences in unconscious effects’), to test the consequences of violating the equal within-individuals variance assumption for both QUID and the OANOVA test. We compared the distribution of Bayes factors and p-values obtained by applying QUID and the OANOVA test to generated data meeting and violating the equal within-participants variance assumption. In the first, equal-variance case, the within-individual standard deviation was low ($\sigma_{w}=`r sigma_w_equal`$) for all participants. In the second, unequal-variance case, the within-individual standard deviation was low ($\sigma_{w}=`r sigma_w_equal`$) for all participants except one, for whom it was set to a high value ($\sigma_{w}=`r sigma_w_unequal`$). As in the main simulation, effect sizes of each participant were sampled from a normal distribution centered at zero ($e_{i} \sim {\mathcal{N}}(0, \sigma_{b})$; where $e_{i}$ denotes the effect size of the ith participant). Within this framework, examined two scenarios: a qualitative differences scenario where participants are differentially affected by the experimental manipulation ($N_{p}=`r N_p_sensitivity`$, $\sigma_{b}=`r sigma_b_sensitivity`$), and a global null condition where all participants are unaffected by the experimental manipulation ($N_{p}=`r N_p_FAs`$, $\sigma_{b}=`r sigma_b_FAs`$). In both scenarios, we simulated random data in `r max_seed` iterations, and used the same number of trials per condition (the total number of trials, $N_{t}=`r 2*N_t`$).
-To examine the tests’ specificity, we measured the proportion of iterations where evidence for an effect was erroneously found in the global null condition. In the equal-variance case, all iterations provided evidence for the lack of an effect according to QUID (all BFs < $\frac{1}{`r bf_criteria`}$). Similarly, nonsignificant results were found by the OANOVA test in `r oanova_apndx_res %>% filter(Analysis == sigma_b_FAs, Condition == sigma_w_equal,sig_OANOVA == FALSE) %>% pull(sig_prop)`% of the iterations (since the 95% CI of a random binomial parameter with p=.05 and n = `r max_seed` is [`r random_binom_CI_alpha[1]` `r random_binom_CI_alpha[2]`], the finding `r oanova_apndx_res %>% filter(Analysis == sigma_b_FAs, Condition == sigma_w_equal,sig_OANOVA == TRUE) %>% pull(sig_prop)`% false-positive results is expected due to randomness). However, in the unequal-variance case, false-positives were obtained in `r quid_apndx_res %>% filter(Analysis == sigma_b_FAs, Condition == sigma_w_unequal,sig_QUID == 'H1') %>% pull(sig_prop)`% of the QUID Bayes Factors (BF > `r bf_criteria`), and `r quid_apndx_res %>% filter(Analysis == sigma_b_FAs, Condition == sigma_w_unequal,sig_QUID == 'Inconclusive') %>% pull(sig_prop)`% showed inconclusive evidence. Again, the OANOVA test showed a similar pattern, detecting falsely significant effects in `r oanova_apndx_res %>% filter(Analysis == sigma_b_FAs, Condition == sigma_w_unequal,sig_OANOVA == TRUE) %>% pull(sig_prop)`% of the iterations. Thus, we show that the specificity of these tests is compromised by violations of the equal-variance assumption.
-We then analyzed the tests’ outcomes in the qualitative differences scenario to examine their sensitivity. When the equal-variance assumption was met, both tests found evidence for an effect (all BFs > `r bf_criteria`, and all p-values < .05). In contrast, in the unequal-variance case, only `r quid_apndx_res %>% filter(Analysis == sigma_b_sensitivity, Condition == sigma_w_unequal,sig_QUID == 'H1') %>% pull(sig_prop)`% of QUIDs BFs showed evidence for an effect, whilst `r quid_apndx_res %>% filter(Analysis == sigma_b_sensitivity, Condition == sigma_w_unequal,sig_QUID == 'H0') %>% pull(sig_prop)`% showed evidence for no effect (the remaining `r quid_apndx_res %>% filter(Analysis == sigma_b_sensitivity, Condition == sigma_w_unequal,sig_QUID == 'Inconclusive') %>% pull(sig_prop)`% were inconclusive). Similarly, the OANOVA test found significant effects in only `r oanova_apndx_res %>% filter(Analysis == sigma_b_sensitivity, Condition == sigma_w_unequal,sig_OANOVA == TRUE) %>% pull(sig_prop)`% of the iterations. Hence, both tests missed true effects when the assumption was not met, demonstrating that their sensitivity is compromised by violations of the equal-variance assumption.
+We used the simulation scheme described in the main text (see section ‘Simulating non-directional unconscious effects’), to test the consequences of violating the equal within-individuals variance assumption for both QUID and the OANOVA test. We compared the distribution of Bayes factors and p-values obtained by applying QUID and the OANOVA test to generated data meeting and violating the equal within-participants variance assumption. In the first, equal-variance case, the within-individual standard deviation was low ($\sigma_{w}=`r apndxA_sigma_w_low`$) for all participants. In the second, unequal-variance case, the within-individual standard deviation was low ($\sigma_{w}=`r apndxA_sigma_w_low`$) for all participants except one, for whom it was set to a high value ($\sigma_{w}=`r apndxA_sigma_w_unequal`$). As in the main simulation, effect sizes of each participant were sampled from a normal distribution centered at zero ($e_{i} \sim {\mathcal{N}}(`r apndxA_mu`, \sigma_{b})$; where $e_{i}$ denotes the effect size of the ith participant). Within this framework, examined two scenarios: a non-directional differences scenario where participants are differentially affected by the experimental manipulation ($N_{p}=`r apndxA_sensitivity_Np`$, $\sigma_{b}=`r apndxA_sensitivity_sigma_b`$), and a global null condition where all participants are unaffected by the experimental manipulation ($N_{p}=`r apndxA_FA_Np`$, $\sigma_{b}=`r apndxA_FA_sigma_b`$). In both scenarios, we simulated random data in `r apndxA_iterations` iterations, and used the same number of trials per condition (the total number of trials, $N_{t}= `r apndxA_Nt`$).
+To examine the tests’ specificity, we measured the proportion of iterations where evidence for an effect was erroneously found in the global null condition. In the equal-variance case, all iterations provided evidence for the lack of an effect according to QUID (all BFs < $\frac{1}{`r bf_criteria`}$). Similarly, nonsignificant results were found by the OANOVA test in `r oanova_apndx_res %>% filter(Analysis == sigma_b_FAs, Condition == sigma_w_equal,sig_OANOVA == FALSE) %>% pull(sig_prop)`% of the iterations (since the 95% CI of a random binomial variable with $p= `r apndxA_alpha`$ and n = `r apndxA_iterations` is [`r random_binom_CI_alpha[1]` `r random_binom_CI_alpha[2]`], the finding `r oanova_apndx_res %>% filter(Analysis == sigma_b_FAs, Condition == sigma_w_equal,sig_OANOVA == TRUE) %>% pull(sig_prop)`% false-positive results is expected due to randomness). However, in the unequal-variance case, false-positives were obtained in `r quid_apndx_res %>% filter(Analysis == sigma_b_FAs, Condition == sigma_w_unequal,sig_QUID == 'H1') %>% pull(sig_prop)`% of the QUID Bayes Factors (BF > `r bf_criteria`), and `r quid_apndx_res %>% filter(Analysis == sigma_b_FAs, Condition == sigma_w_unequal,sig_QUID == 'Inconclusive') %>% pull(sig_prop)`% showed inconclusive evidence. Again, the OANOVA test showed a similar pattern, detecting falsely significant effects in `r oanova_apndx_res %>% filter(Analysis == sigma_b_FAs, Condition == sigma_w_unequal,sig_OANOVA == TRUE) %>% pull(sig_prop)`% of the iterations. Thus, we show that the specificity of these tests is compromised by violations of the equal-variance assumption.
+We then analyzed the tests’ outcomes in the non-directional differences scenario to examine their sensitivity. When the equal-variance assumption was met, both tests found evidence for an effect (all BFs > `r bf_criteria`, and all p-values < `r apndxA_alpha`). In contrast, in the unequal-variance case, only `r quid_apndx_res %>% filter(Analysis == sigma_b_sensitivity, Condition == sigma_w_unequal,sig_QUID == 'H1') %>% pull(sig_prop)`% of QUIDs BFs showed evidence for an effect, whilst `r quid_apndx_res %>% filter(Analysis == sigma_b_sensitivity, Condition == sigma_w_unequal,sig_QUID == 'H0') %>% pull(sig_prop)`% showed evidence for no effect (the remaining `r quid_apndx_res %>% filter(Analysis == sigma_b_sensitivity, Condition == sigma_w_unequal,sig_QUID == 'Inconclusive') %>% pull(sig_prop)`% were inconclusive). Similarly, the OANOVA test found significant effects in only `r oanova_apndx_res %>% filter(Analysis == sigma_b_sensitivity, Condition == sigma_w_unequal,sig_OANOVA == TRUE) %>% pull(sig_prop)`% of the iterations. Hence, both tests missed true effects when the assumption was not met, demonstrating that their sensitivity is compromised by violations of the equal-variance assumption.
 
 \newpage
 
-# Appendix B. Comparing the power of the PBT and Sign-Consistency test {#Apndx-B}
-To examine the differential sensitivity of PBT and the sign-consistency tests, we conducted a power analysis, simulating two scenarios under the simulations scheme described in the main text (see section ‘Simulating qualitative differences in unconscious effects’): First, a *qualitative differences* scenario where an effect exists for each participant but it is inconsistent within participants ($e_{i} \sim {\mathcal{N}}(0, \sigma_{b})$; where $\sigma_{b}$=2). Second, a *directional effect* scenario, with individual variation around a positive mean effect size  ($e_{i} \sim {\mathcal{N}}(1, \sigma_{b})$; where $\sigma_{b}$=2). For each scenario we manipulated the number of simulated participants ($N_{p}$=`r N_p[1]`/`r N_p[2]`/`r N_p[3]`) and trials ($N_{t}$=`r N_t[1]`/`r N_t[2]`/`r N_t[3]`) across `r max_seed` random iterations, with the within-participant SD ($\sigma_{w}$) set to 10 in both scenarios.
-Statistical power was defined as the proportion of significant results in the Sign Consistency case, and as the proportion of $HDI_{95}$ intervals that do not include zero in the PBT case. While both tests were similarly sensitive when applied to well-powered datasets (e.g., when $N_{p}$=`r N_p[3]` or $N_{t}$=`r N_t[3]`), the sign-consistency test proved to be more sensitive in the remaining conditions (see Figure 7 in Ince et al., [-@ince2021a], for a comparison between the power of PBT and a standard t-test for the *directional effect* scenario).
 
-(ref:appendixbcaption)  Appendix B-figure 1. Power analysis for the Sign-Consistency (SC) and Prevalence Bayesian (PBT) tests for simulated datasets. Each cell depicts the percent of iterations where SC resulted in significant effects, and where the prevalence $HDI_{95}$ precluded zero (upper and lower panels, respectively). Rows and columns correspond to the number of simulated participants ($N_{p}$), and the number of simulated trials per participant  ($N_{t}$), respectively, Left panel: the results of the PBT and SC in the *qualitative differences* scenario. Right: the results of the PBT and SC in the *directional effect* scenario. 
+```{r appendix_b}
+# use the results of running the appendixB script above, to extract the simulation parameters
+apndxB_sig_b <- dplyr::first(apndx_b_conf$params$sigma_b)
+apndxB_sig_w <- dplyr::first(apndx_b_conf$params$sigma_w)
+# we multiply by 2 because the simulation expects number of trials per condition and we report the total amount of trials
+apndxB_Nt <- 2 * unique(apndx_b_conf$params$N_t)
+apndxB_Np <- unique(apndx_b_conf$params$N_p)
+apndxB_de_mu <- max(apndx_b_conf$params$mu)
+apndxB_nd_mu <- min(apndx_b_conf$params$mu)
+apndxB_iterations <- max(apndx_b_conf$results$seeds)
+```
+
+
+# Appendix B. Comparing the power of the PBT and Sign-Consistency test {#Apndx-B}
+To examine the differential sensitivity of PBT and the sign-consistency tests, we conducted a power analysis, simulating two scenarios under the simulations scheme described in the main text (see section ‘Simulating non-directional unconscious effects’): First, a *non-directional differences* scenario where an effect exists for each participant but it is inconsistent within participants ($e_{i} \sim {\mathcal{N}}(`r apndxB_nd_mu`, \sigma_{b})$; where $\sigma_{b}$=`r apndxB_sig_b`). Second, a *directional effect* scenario, with individual variation around a positive mean effect size  ($e_{i} \sim {\mathcal{N}}(`r apndxB_de_mu`, \sigma_{b})$; where $\sigma_{b}$=`r apndxB_sig_b`). For each scenario we manipulated the number of simulated participants ($N_{p}$=`r apndxB_Np[1]`/`r apndxB_Np[2]`/`r apndxB_Np[3]`) and trials ($N_{t}$=`r apndxB_Nt[1]`/`r apndxB_Nt[2]`/`r apndxB_Nt[3]`) across `r apndxB_iterations` random iterations, with the within-participant SD ($\sigma_{w}$) set to `r apndxB_sig_w` in both scenarios.
+Statistical power was defined as the proportion of significant results in the Sign Consistency case, and as the proportion of $HDI_{95}$ intervals that do not include zero in the PBT case. While both tests were similarly sensitive when applied to well-powered datasets (e.g., when $N_{p}$=`r apndxB_Np[3]` or $N_{t}$=`r apndxB_Nt[3]`), the sign-consistency test proved to be more sensitive in the remaining conditions (see Figure 7 in Ince et al., [-@ince2021a], for a comparison between the power of PBT and a standard t-test for the *directional effect* scenario).
+
+(ref:appendixbcaption)  Appendix B-figure 1. Power analysis for the Sign-Consistency (SC) and Prevalence Bayesian (PBT) tests for simulated datasets. Each cell depicts the percent of iterations where SC resulted in significant effects, and where the prevalence $HDI_{95}$ precluded zero (upper and lower panels, respectively). Rows and columns correspond to the number of simulated participants ($N_{p}$), and the number of simulated trials per participant  ($N_{t}$), respectively, Left panel: the results of the PBT and SC in the *non-directional differences* scenario. Right: the results of the PBT and SC in the *directional effect* scenario. 
 ```{r appendix-B, out.width="100%", fig.cap="(ref:appendixbcaption)", warning = FALSE}
 knitr::include_graphics(paste("appendix","Appendix_B.png", sep =
                                 .Platform$file.sep))

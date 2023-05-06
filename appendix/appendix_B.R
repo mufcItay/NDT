@@ -11,7 +11,7 @@ source(paste(apdx_fld, 'appendix_utils.R', sep = .Platform$file.sep))
 # set power analysis parameter combinations
 N_p <- c(10, 30, 50) # the number of participants
 N_t <- c(20, 100, 500) # the number of experimental trials
-sigma_b = c(2)
+sigma_b = 2
 sigma_w <- 10
 mu = c(0, 1)
 # defines the number of simulations
@@ -21,7 +21,7 @@ results_cols <- c(paste('sc', c('p','stat'),sep = '_'),
                   paste('pbt', c('low_hdi95', 'high_hdi95', 'MAP'),sep = '_'))
 # note that we feed the initialization function with N_t /2 because it expects
 # the number of trials per condition (we use two conditions)
-appendix_b_conf <- initialize_simulation(N_p, N_t/2, sigma_b, sigma_w, mu, max_seed, 
+apndx_b_conf <- initialize_simulation(N_p, N_t/2, sigma_b, sigma_w, mu, max_seed, 
                               results_cols = results_cols)
 # define the power analysis function
 power_analysis <- function(conf, params, df, seed) {
@@ -55,12 +55,12 @@ run_appendixB <- function(conf) {
   return(results_summary)
 }
 
-save_plot_appendix_B <- function(results_summary) {
+save_plot_appendixB <- function(results_summary) {
   # plot the results
   plt_appendix_B <- results_summary %>%
     mutate(Power = round(100 * Power),
            Test = factor(Test),
-           mu = factor(ifelse(mu == 0, 'Qualitative differences',
+           mu = factor(ifelse(mu == 0, 'Non-directional differences',
                               'Directional effect ')),
            N_p = factor(N_p),
            N_t = factor(N_t)) %>%

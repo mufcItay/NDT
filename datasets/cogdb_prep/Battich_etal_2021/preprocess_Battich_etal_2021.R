@@ -39,28 +39,3 @@ data_rt <- data %>%
 # bind RT and response data together
 data_all <- rbind(data_rt, data_response)
 write.csv(data_all, 'Battich_etal_2021.csv')
-
-## test for difference in effects between halves
-compare_halves <- function(data, exp_label) {
-  library(signcon)
-  res_1st <- get_directional_effect(data %>% 
-                                       filter(exp == exp_label, half == 1),
-                                     idv = 'idv', iv = 'iv2', dv ='dv')
-  scores_1st = res_1st$effect_per_id$score
-  res_2nd <- get_directional_effect(data %>% 
-                                       filter(exp == exp_label, half == 2),
-                                     idv = 'idv', iv = 'iv2', dv ='dv')
-  scores_2nd = res_2nd$effect_per_id$score
-  return(t.test(scores_1st, scores_2nd,paired = TRUE))
-}
-# go over all experiments and return the result of a t-test over experiments
-# for the difference in ms integration between halves
-compare_all_halves <- function(study_data) {
-  exps <- unique(study_data$exp)
-  t_res <- lapply(exps, function(e) compare_halves(study_data,e))
-  res_df <- data.frame(exp = exps,
-                       t = sapply(t_res, function(t) t$statistic),
-                       p = sapply(t_res, function(t) t$p.value))
-  return(res_df)
-}
-compare_all_halves(data_all)

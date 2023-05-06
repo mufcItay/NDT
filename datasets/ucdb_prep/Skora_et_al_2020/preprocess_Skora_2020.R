@@ -1,8 +1,6 @@
-library(signcon)
 library(dplyr)
 library(readxl)
 library(tidyr)
-set.seed(121)
 
 study_name <- 'Skora et al_2020'
 
