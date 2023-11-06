@@ -4,9 +4,13 @@ library(dplyr)
 library(gridExtra)
 library(grid)
 library(tidyr)
+library(extraDistr)
 
+# source scripts from subfolders
 figures_fld <- 'figures'
+apdx_fld <- 'appendix'
 source(paste(figures_fld, 'plotting_utils.R', sep = .Platform$file.sep))
+source(paste(apdx_fld, 'generate_dataset.R', sep = .Platform$file.sep))
 
 #' prepare-data
 #' A helper function that prepares data to be presented in the figure 
@@ -182,25 +186,26 @@ graphics_conf <- list(size_seg = 2, color_spreading_lines = '#B1C2CF',
                       margin_y_subj = 0.5, margin_y_conds = 0.125, legnth_med = 2,
                       incong_color = '#e41a1c', cong_color = '#377eb8', med_color = 'gray',
                       vline_size = 1, x_title_size = 22, x_text_size = 20)
-# for illustration, add an RT offset
-offset_rt <- 650
 # generate nde plot
+offset_rt <- 650
 nde_sd_b <- 15
 nde_sd_w <- 30
 nde_n <- 15
 nde_trials <- 100
-nde_data <- generate_dataset(p_mean = 0, p_sd = nde_sd_b, N = nde_n, 
-                             trials_per_cnd = nde_trials, wSEsd = nde_sd_w, 
+nde_data <- generate_dataset(p_mean = 0, p_sd = nde_sd_b, N = nde_n,
+                             trials_per_cnd = nde_trials, 
+                             wSEsd = nde_sd_w, dist_type = 'Wald',
                              dv_offset = offset_rt)
-ratio <- generate_agg_plot(nde_data, graphics_conf, 'nde_plt')
+ratio <- generate_agg_plot(nde_data, graphics_conf, 'wald_nde_plt')
 sn_sd_b <- 0
 sn_sd_w <- 100
 sn_n <- 15
 sn_trials <- 100
 sn_data <- generate_dataset(p_mean = 0, p_sd = 0, N = 15, 
-                            trials_per_cnd = 100, wSEsd = 100,
+                            trials_per_cnd = 100, 
+                            wSEsd = 100, dist_type = 'Wald',
                             dv_offset = offset_rt)
-generate_agg_plot(sn_data, graphics_conf, 'sn_plt', ratio)
+generate_agg_plot(sn_data, graphics_conf, 'wald_sn_plt', ratio)
 
 # common analysis, two-sided t-test
 nde_t_test <- nde_data %>%
@@ -221,14 +226,14 @@ sn_t_test <- sn_data %>%
 # Bayesian analysis
 bf_criteria <- 3
 # QUID
-source('datasets_analysis\\quid.R')
+source(paste('datasets_analysis', 'quid.R', sep = .Platform$file.sep))
 nde_quid_res <- run_quid(nde_data)
 sn_quid_res <- run_quid(sn_data)
 nde_bf <- 1/ nde_quid_res$quid_bf
 sn_bf <- 1/ sn_quid_res$quid_bf
 
 #PBT
-source('datasets_analysis\\pbt.R')
+source(paste('datasets_analysis', 'pbt.R', sep = .Platform$file.sep))
 t_f <- function(data) {
   conditions <- unique(data$iv)
   t_res <- t.test(data[data$iv == conditions[2],]$dv,
@@ -240,32 +245,33 @@ sn_pbt_res <- run_pbt(sn_data, test_function = t_f)
 
 # OANOVA Test
 oanova_alpha <- .05
-source('datasets_analysis\\oanova_test.R')
+source(paste('datasets_analysis', 'oanova_test.R', sep = .Platform$file.sep))
 nde_OANOVA_res <- run_oanova_test(nde_data)
 sn_OANOVA_res <- run_oanova_test(sn_data)
 
 ## plot Kruschke style plots for the figure
 nde_b <- dists$normal
-nde_w <- dists$normal
-nde_w$ddist_params$sd = nde_w$ddist_params$sd / 2 
+nde_w <- dists$wald
+nde_w$ddist_params$lambda = get_wald_lambda(nde_w$ddist_params$mu, 100) 
+
 save_png <- function(fn, dist, labels) {
-  fn <- paste(plots_fld, paste0(fn, '.png'), sep = .Platform$file.sep)
+  fn <- paste(plots_fld, paste0('wald_', '_', fn, '.png'), sep = .Platform$file.sep)
   png(fn, width=165, height=123, bg="transparent", res=72, )
   plot_dist(dist, labels = labels, plot_dist_name = F)
   dev.off()
 }
 
 # upper panel - nde (non-directional effect)
-save_png('nde_b', nde_b, c(mean = expression(N (0, sigma[b]))))
-save_png('nde_w', nde_w, c(mean = expression(N (0, sigma[w]))))
+save_png('wald_nde_b', nde_b, c(mean = expression(N (0, sigma[b]))))
+save_png('wald_nde_w', nde_w, c(mean = expression(IG (0, lambda))))
 
 # left panel 
 sn_b <- dists$normal
 # set sd to a very low value (ideally zero would be used here)
 sn_b$ddist_params$sd = 0.0000001 
 sn_b$plot_type <- 'line'
-sn_w <- dists$normal
-sn_w$ddist_params$sd = sn_w$ddist_params$sd * 2 
+sn_w <- dists$wald
+sn_w$ddist_params$lambda = get_wald_lambda(sn_w$ddist_params$mu, 150) 
 # lower panel - sn (strong/global null)
-save_png('sn_b', sn_b, c(mean = expression(delta(0))))
-save_png('sn_w', sn_w, c(mean = expression(N (0, sigma[w]))))
+save_png('wald_sn_b', sn_b, c(mean = expression(delta (0))))
+save_png('wald_sn_w', sn_w, c(mean = expression(W (0, lambda))))

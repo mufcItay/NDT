@@ -11,7 +11,7 @@ DIFFERENT_LBL <- 'different'
 
 get_Faivre_data <- function(exp = 0, relatedness = 'identical') {
   chancePerformance <- 1/2
-  expFiles <- dir(paste0('data\\Exp',exp), full.names = T)
+  expFiles <- dir(paste0('data', .Platform$file.sep, 'Exp',exp), full.names = T)
   # recode relatedness to fit with the actual labels in the data
   relatedness <- ifelse(relatedness == IDENTICAL_LBL,'cong', 
                         ifelse(relatedness == DIFFERENT_LBL,'incong', 'INVALID'))

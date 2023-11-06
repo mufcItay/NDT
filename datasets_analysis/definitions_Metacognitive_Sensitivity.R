@@ -1,5 +1,7 @@
 library(pracma)
-source('datasets_analysis\\definitions.R')
+source(paste('datasets_analysis', 'definitions.R',
+             sep = .Platform$file.sep))
+
 #' get_AUC
 #' A summary function for the calculation of AUC
 #' @param mat a matrix of the accuracy and confidence scores (columns) for each trial (rows).

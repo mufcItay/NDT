@@ -21,6 +21,7 @@ setClass(
     sum_fs = 'function',
     analyze_exps_f = 'function',
     n_samp = "numeric",
+    n_perm = "numeric",
     seed = "numeric"
   )
 )
@@ -34,6 +35,7 @@ setMethod("initialize", analysisConfCName,
                    sum_fs,
                    analyze_exps_f,
                    n_samp = 10000,
+                   n_perm = 100,
                    seed = 101) {
             .Object@input_source <- input_source
             .Object@db_output_fn <- db_output_fn
@@ -42,6 +44,7 @@ setMethod("initialize", analysisConfCName,
             .Object@preprocess_f <- preprocess_f
             .Object@summary_f <- summary_f
             .Object@n_samp <- n_samp
+            .Object@n_perm <- n_perm
             .Object@sum_fs <- sum_fs
             .Object@analyze_exps_f <- analyze_exps_f
             .Object@seed <- seed
@@ -70,9 +73,12 @@ init_analysis <- function(type) {
     source(paste(dir_path, paste0(defs_prefix, '_Confidence.R'), 
                  sep = .Platform$file.sep))
     # create an instance of the analysis configuration for the confidence DB
-    conf <- new(analysisConfCName, 'datasets\\cdb\\CONFDB\\', 'results\\Confidence_DB.csv', 
-                'results\\Confidence_Results.csv', preprocess_dfs_cdb, mean,
-                sum_fs = get_sum_fs_confidence, analyze_exps_f = run_signcon_analyses)
+	
+    conf <- new(analysisConfCName, 
+				paste('datasets', 'cdb', 'CONFDB', sep = .Platform$file.sep), 
+				paste('results', 'Confidence_DB.csv', sep = .Platform$file.sep),
+				paste('results', 'Confidence_Results.csv', sep = .Platform$file.sep),
+                preprocess_dfs_cdb, mean, sum_fs = get_sum_fs_confidence, analyze_exps_f = run_signcon_analyses)
   }
   
   
@@ -80,29 +86,32 @@ init_analysis <- function(type) {
   if(type == Metacognitive_Sensitivity_analysis_lbl) {
     source(paste(dir_path, paste0(defs_prefix, '_Metacognitive_Sensitivity.R'), 
                  sep = .Platform$file.sep))
-    conf <- new(analysisConfCName, 'datasets\\cdb\\AUCDB\\',
-                'results\\AUC_DB.csv', 'results\\Metacognitive Sensitivity_Results.csv',
-                preprocess_dfs_AUC, get_AUC, sum_fs = get_sum_fs_AUC, 
-                analyze_exps_f = run_signcon_analyses)
+    conf <- new(analysisConfCName, 
+				paste('datasets', 'cdb', 'AUCDB', sep = .Platform$file.sep), 
+				paste('results', 'AUC_DB.csv', sep = .Platform$file.sep),
+				paste('results', 'Metacognitive Sensitivity_Results.csv', sep = .Platform$file.sep),
+                preprocess_dfs_AUC, get_AUC, sum_fs = get_sum_fs_AUC, analyze_exps_f = run_signcon_analyses)
   }
 
   ## Unconscious Processing analysis
   if(type == Unconscious_Processing_analysis_lbl) {
       source(paste(dir_path, paste0(defs_prefix, '_Unconscious_Processing.R'), 
                  sep = .Platform$file.sep))
-    conf <- new(analysisConfCName, 'datasets\\ucdb\\',
-                'results\\UC_DB.csv', 'results\\Unconscious Processing_Results.csv', 
-                preprocess_dfs_UC, mean, sum_fs = get_sum_fs_UC, 
-                analyze_exps_f = run_all_analyses)
+    conf <- new(analysisConfCName, 
+				paste('datasets', 'ucdb', sep = .Platform$file.sep), 
+				paste('results', 'UC_DB.csv', sep = .Platform$file.sep),
+				paste('results', 'Unconscious Processing_Results.csv', sep = .Platform$file.sep),
+                preprocess_dfs_UC, mean, sum_fs = get_sum_fs_UC, analyze_exps_f = run_all_analyses)
   }
   
   ## Cognitive Psychology analysis
   if(type == Cognitive_Psychology_analysis_lbl) {
       source(paste(dir_path, paste0(defs_prefix, '_Cognitive_Psychology.R'), 
                  sep = .Platform$file.sep))
-    conf <- new(analysisConfCName, 'datasets\\cogdb\\','', 
-                'results\\Cognitive Psychology_Results.csv', preprocess_dfs_cogdb, mean,
-                sum_fs = get_sum_fs_cogdb, analyze_exps_f = run_signcon_analyses)
+    conf <- new(analysisConfCName, 
+				paste('datasets', 'cogdb', sep = .Platform$file.sep), '',
+				paste('results', 'Cognitive Psychology_Results.csv', sep = .Platform$file.sep),
+				preprocess_dfs_cogdb, mean, sum_fs = get_sum_fs_cogdb, analyze_exps_f = run_signcon_analyses)
   }
   return(conf)
 }
@@ -127,6 +136,7 @@ run_all_analyses <- function(conf, analysis_fs, data, exp_name) {
   set.seed(conf@seed)
   signcon_res <- test_sign_consistency(data,'idv', c('dv','iv2'), 'iv',
                                        null_dist_samples = conf@n_samp,
+                                       perm_repetitions = conf@n_perm,
                                        summary_function = analysis_fs[[exp_name]]$summary)
   directional_test_res <- test_directional_effect(data,'idv', c('dv','iv2'), 'iv',
                                                   null_dist_samples = conf@n_samp, ci_reps = 10^5,
@@ -155,6 +165,7 @@ run_signcon_analyses <- function(conf, analysis_fs, data, exp_name) {
   set.seed(conf@seed)
   signcon_res <- test_sign_consistency(data,'idv', c('dv','iv2'), 'iv',
                                   null_dist_samples = conf@n_samp,
+                                  perm_repetitions = conf@n_perm,
                                   summary_function = analysis_fs[[exp_name]]$summary)
   directional_test_res <- test_directional_effect(data,'idv', c('dv','iv2'), 'iv',
                                                   null_dist_samples = conf@n_samp, ci_reps = 10^5,

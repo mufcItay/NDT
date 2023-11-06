@@ -45,12 +45,12 @@ get_cluster <- function(n_cores_from_max = 1) {
 }
 
 # the function initializes the configuration for the simulation
-initialize_simulation <- function(N_p, N_t, sigma_b, sigma_w, mu, max_seed,
-                                  results_cols) {
+initialize_simulation <- function(N_p, N_t, sigma_b, sigma_w, mu, n_iters,
+                                  results_cols, seed_offset = 0) {
   # create a grid of all parameter combinations
   params <- crossing(N_p, N_t, sigma_b, sigma_w, mu)
   # initialize a results grid to store the power analysis results
-  seeds <- 1:max_seed
+  seeds <- 1:n_iters + seed_offset
   results <- crossing(N_p, N_t, sigma_b, sigma_w, mu, seeds)
   results[,results_cols] <- -1
   
@@ -72,22 +72,23 @@ run_simulation <- function(conf, inner_sim_f, cluster = NULL) {
   for (param_ind in 1:n_sim_conditions) { 
     # iterate over repetitions within each parameter combination
     res = foreach (seed = seeds, .combine = 'c',
-                   .packages = c("dplyr", "signcon", "nleqslv")) %dopar% {
+                   .packages = c("dplyr", "signcon", "nleqslv")) %do% {
                      set.seed(seed)
                      params <- conf$params[param_ind,]
                      # create the datasets according to parameters
-                     df <- generate_dataset(p_mean = params$mu, 
-                                            p_sd = params$sigma_b, seed = seed, 
-                                            N = params$N_p, 
-                                            trials_per_cnd = params$N_t, 
+                     df <- generate_dataset(p_mean = params$mu,
+                                            p_sd = params$sigma_b, seed = seed,
+                                            N = params$N_p,
+                                            trials_per_cnd = params$N_t,
                                             wSEsd = params$sigma_w,
                                             dv_offset = 650)
                      inner_sim_f(conf, params, df, seed)
                      }
     # save all results
-    res_idx <- (param_ind - 1) * max(seeds) + seeds
+    n_iters <- max(seeds) - min(seeds) + 1
+    res_idx <- (param_ind - 1) * n_iters + 1:n_iters
     conf$results[res_idx, conf$results_cols] <- 
-      t(matrix(unlist(res), ncol = max(seeds)))
+      t(matrix(unlist(res), ncol = n_iters))
     setTxtProgressBar(pb, param_ind) 
     
   }

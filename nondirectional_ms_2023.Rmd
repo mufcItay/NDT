@@ -100,14 +100,18 @@ groundhog.library(c(
   'dplyr',
   'tidyr',
   'pracma',
+  'extraDistr',
   'patchwork',
   'HDInterval',
   'MCMCpack',
-  'nleqslv'), '2023-04-10')
+  'BayesFactor',
+  'nleqslv',
+  'xfun'), '2023-04-10')
 # separate github libraries
-groundhog.library(c(
-  'github::mufcitay/signcon'), '2023-04-10')
-
+# groundhog.library(c(
+#   'github::mufcItay/signcon'), '2023-09-09')
+library(signcon)
+  
 source('datasets_analysis\\utils.R')
 source('datasets_analysis\\definitions.R')
 ```
@@ -134,20 +138,20 @@ source('figures\\fig4.R')
 # to run the analysis again, uncomment the (commented) run_appendixA line and comment the read.csv line which reads the results of an existing simulations run.
 source('appendix\\appendix_A.R')
 # appendixA_res <- run_appendixA(apndxA_conf_FAs, apndxA_conf_sensitivity)
-appendixA_res <- read.csv('appendix\\results\\2023-05-07_09_00_08Appendix_A_QUID_OANOVA.csv')
+appendixA_res <- read.csv('appendix\\results\\2023-09-24_02_57_13Appendix_A_QUID_OANOVA.csv')
 
 # the analysis and simulations for appendix B.
 # to run the analysis again, uncomment the (commented) run_appendixB line and comment the read.csv line which reads the results of an existing simulations run (keeping the save_plot_appendixB line.
 source('appendix\\appendix_B.R')
-# appendixB_res <- run_appendixB(apndx_b_conf)
-appendixB_res <- read.csv('appendix\\results\\2023-05-08_00_56_10Appendix_B.csv')
+# l
+appendixB_res <- read.csv('appendix\\results\\2023-09-26_15_10_53Appendix_B.csv')
 save_plot_appendixB(appendixB_res)
 ```
 
 ```{r abstract-code, include=FALSE}
 # we used fixed numbers on the abstract, here is the code to recreate them.
 
-# get the number of partcipants and effects in the ucdb
+# get the number of participants and effects in the ucdb
 ucdb_conf <- init_analysis(Unconscious_Processing_analysis_lbl)
 ucdb_dfs <- get_input_df(ucdb_conf)
 res_summary_fn <- 'Unconscious Processing_Results.csv'
@@ -260,9 +264,9 @@ We quantified the average within-participant sign consistency of effects for whi
 
 Together, four different analysis methods support the conclusion that by and large, unconscious priming effects are not masked by individual differences. Yet one can still claim that these statistical tests are simply not sensitive enough to detect qualitatively variable, non-directional effects, even when those exist. To test this claim, and demonstrate how these methods can be used to reveal such hidden effects in other fields, we collected additional, openly accessible, datasets from studies conducted in different fields of research within experimental psychology. We then used our non-parametric test on these datasets, demonstrating its potential benefit in determining whether a null result at the group level hides true, but variable, effects at the individual participant level.
 
-# Testing within-participant sign consistency across experimental psychology studies
+# Positive Control: Testing within-participant sign consistency across experimental psychology studies
 ```{r other-domains-tests, include=FALSE}
-# get the counts of experiments for the section (from all domains), reading from the enviroment created by soucing the fig4.R script
+# get the counts of experiments for the section (from all domains), reading from the environment created by sourcing the fig4.R script
 N_ns_no_UC <- sum(ns_sum_Ns %>% 
                     filter(type != "Unconscious Processing") %>% 
                     dplyr::pull(N))
@@ -283,6 +287,8 @@ N_ns_Social <- N_ns_psycog %>% filter(sub_cat == 'Social') %>% pull(n)
 
 # extract individual experiments results
 battich_res <- null_results %>% filter(startsWith(exp, 'Battich'))
+all_ns_adam_res <- null_results %>% 
+  filter(startsWith(exp,'Adam'), directional_test.p > alpha)
 ns_adam_res <- null_results %>% 
   filter(startsWith(exp,'Adam'), directional_test.p > alpha, signcon.p <= alpha)
 
@@ -307,13 +313,21 @@ compare_halves <- function(data, exp_label) {
 res_battich_resp1_t <- compare_halves(battich_data[battich_data$exp == battich_res$exp[1],], battich_res$exp[1])
 res_battich_resp2_t <- compare_halves(battich_data[battich_data$exp == battich_res$exp[2],], battich_res$exp[2])
 res_battich_rt2_t <- compare_halves(battich_data[battich_data$exp == battich_res$exp[3],], battich_res$exp[3])
+
+# get effects for which non-directional effects were already reported
+machado_etal_fld <- 'datasets\\additional_analyses\\Machado_etal_2007_2009'
+source(paste(machado_etal_fld, "process_Machado_2007_2009.R", sep = .Platform$file.sep))
+machado_2007_res <- analyze_machado(2007, machado_etal_fld)
+machado_2009_res <- analyze_machado(2009, machado_etal_fld)
+machado_2007_350 <- machado_2007_res[machado_2007_res$SOA == 350,]
+machado_2009_650 <- machado_2009_res[machado_2009_res$SOA == 650,]
 ```
 
 We used the sign consistency test to expose hidden effects that were not revealed by standard directional tests in various fields of research. We collected data from different open-access databases (the Confidence Database [@rahnev2020a], the Reproducibility Project [@collaboration2015a], and the Classic Visual Search Effects open dataset [@adam2021a]). We also used social media to ask for previously reported null effects. We had two inclusion criteria: first, to estimate subject-level sign consistency, the independent variable had to be manipulated within single participants. And second, we filtered out effects that were significant in a non-parametric, directional test. Overall, we collected data associated with `r N_ns_no_UC` nonsignificant effects (`r N_ns_Confidence` from the Confidence Database, `r apa_num(as.integer(N_ns_Reproducibility), numerals = FALSE)` from the Reproducibility Project, `r apa_num(as.integer(N_ns_Attention), numerals = FALSE)` from the Classic Visual Search Effects open dataset and `r apa_num(as.integer(N_ns_Social),numerals = FALSE)` from the social media query). In all cases, participants were excluded for having fewer than five trials per experimental condition and/or zero variance in the dependent variable. 
 
-We grouped the different effects into three categories, according to research topics and the analysis we used to test them: first, we tested for effects of participants’ responses in 2-alternative forced choice tasks on their confidence ratings in all datasets from the Confidence Database (@rahnev2020a; retrieved on 23/1/2023), by comparing the mean confidence ratings between two different responses. Second, we used the same Confidence Database datasets to test for metacognitive sensitivity effects of response. Metacognitive sensitivity was quantified as the area under the response-conditional type-2 Receiver Operating Characteristic curve (@meuwese2014a; here we also excluded datasets that did not include accuracy scores; the remaining `r N_ns_Metacog` effects were analyzed). Third, we grouped effects from the Reproducibility Project [@collaboration2015a], the Classic Visual Search Effects open dataset [@adam2021a], and a single study from the social media query [@battich2021a] under a more general “Cognitive Psychology” category. For these studies, we tested the sign consistency of the effect tested by the original authors (averaged difference or interaction effects).
+We grouped the different effects into three categories, according to research topics and the analysis we used to test them: first, we tested for effects of participants’ responses in 2-alternative forced choice tasks on their confidence ratings in all datasets from the Confidence Database (@rahnev2020a; retrieved on 23/1/2023), by comparing the mean confidence ratings between two different responses. Second, we used the same Confidence Database datasets to test for metacognitive sensitivity effects of response. Metacognitive sensitivity, that is, the agreement between objective accuracy and subjective confidence, was quantified as the area under the response-conditional type-2 Receiver Operating Characteristic curve (@meuwese2014a; here we also excluded datasets that did not include accuracy scores; the remaining `r N_ns_Metacog` effects were analyzed). Third, we grouped effects from the Reproducibility Project [@collaboration2015a], the Classic Visual Search Effects open dataset [@adam2021a], and a single study from the social media query [@battich2021a] under a more general “Cognitive Psychology” category. For these studies, we tested the sign consistency of the effect tested by the original authors (averaged difference or interaction effects).
 
-Across the entire sample, including all analyzed effects (N = `r N_ns_no_UC`), most effects (`r apa_num(sig_nondir_cat_no_uc)`%) showed significant sign consistency. This trend was further explored within each category, revealing significant effects in `r apa_num(sig_nondir_cat %>% filter(type == 'Confidence') %>% dplyr::pull(perc_nondir_sig))`% `r apa_num(sig_nondir_cat %>% filter(type == 'Metacognitive Sensitivity') %>% dplyr::pull(perc_nondir_sig))`%, and `r apa_num(sig_nondir_cat %>% filter(type == 'Cognitive Psychology') %>% dplyr::pull(perc_nondir_sig))`%, of the Confidence, Metacognitive Sensitivity, and Cognitive Psychology effects (four visual search effects and all three effects from Battich et al., [-@battich2021a], compared with only `r apa_num(sig_nondir_cat %>% filter(type == 'Unconscious Processing') %>% dplyr::pull(perc_nondir_sig))`% of the unconscious processing effects, as reported above (see Figure 4). These results validate the potential of using sign consistency to reveal effects on cognition and perception. In striking contrast to the absence of hidden effects in the field of unconscious processing, we found compelling evidence for pronounced inter-individual differences that mask group-level effects in other domains.
+Across the entire sample, including all analyzed effects (N = `r N_ns_no_UC`), most effects (`r apa_num(sig_nondir_cat_no_uc)`%) showed significant sign consistency. This trend was further explored within each category, revealing significant effects in `r apa_num(sig_nondir_cat %>% filter(type == 'Confidence') %>% dplyr::pull(perc_nondir_sig))`% `r apa_num(sig_nondir_cat %>% filter(type == 'Metacognitive Sensitivity') %>% dplyr::pull(perc_nondir_sig))`%, and `r apa_num(sig_nondir_cat %>% filter(type == 'Cognitive Psychology') %>% dplyr::pull(perc_nondir_sig))`%, of the Confidence, Metacognitive Sensitivity, and Cognitive Psychology effects (`r xfun::numbers_to_words(nrow(ns_adam_res))`  visual search effects and all three effects from Battich et al., [-@battich2021a], compared with only `r apa_num(sig_nondir_cat %>% filter(type == 'Unconscious Processing') %>% dplyr::pull(perc_nondir_sig))`% of the unconscious processing effects, as reported above (see Figure 4). These results validate the potential of using sign consistency to reveal effects on cognition and perception. In striking contrast to the absence of hidden effects in the field of unconscious processing, we found compelling evidence for pronounced inter-individual differences that mask group-level effects in other domains.
 
 However, special care should be taken when interpreting non-directional test results, and when designing experiments targeting non-directional effects (see Box A for best-practice recommendations). A case in point can be found in Battich et al., [-@battich2021a], who examined the hypothesis that joint attention affects multisensory integration. Critically, this hypothesis was tested by comparing two social conditions that were counterbalanced across participants, such that for half of the participants a joint attention condition was performed before a baseline condition where participants performed the same task individually, and vice versa for the other half. As a result, contrasting the two conditions within participants is identical to contrasting early and late trials. Thus, although the interaction between social condition and multisensory integration  showed significant sign consistency (M = `r apa_num(100* battich_res$signcon.statistic[1])`%, p `r apa_p(battich_res$signcon.p[1])`, M = `r apa_num(100* battich_res$signcon.statistic[2])`%, p `r apa_p(battich_res$signcon.p[2])`, and M = `r apa_num(100* battich_res$signcon.statistic[3])`%, p `r apa_p(battich_res$signcon.p[3])`, for the three effects that showed sign consistency effects paralleled with null results according to directional analysis), we cannot unambiguously interpret these results as suggesting a causal, non-directional, effect of the social manipulation. This is because, under this design, the social setting condition and the order of experimental conditions are perfectly correlated within individual participants, rendering both potential drivers behind the observed effect.
 
@@ -339,7 +353,7 @@ Overall, in two out of `r n_empiric_ns` effects, a sign consistency test detecte
 
 While our focus here was on unconscious processing, a non-directional analysis approach can be useful in many fields of investigation where individual differences are expected. A null finding in a standard t-test or an ANOVA may indicate the true absence of an effect or a lack of statistical power, but it may also be driven by qualitative heterogeneity in participant-level effect signs. In the field of neuroimaging, the adoption of information-based, non-directional approaches famously revealed such effects that were otherwise masked by heterogeneity in neural activation patterns and fine brain structure [@norman2006a; @kriegeskorte2013a; @gilron2017a]. In the context of this investigation, we found considerable evidence for cases where inter-individual differences mask group-level effects. These cases carry theoretical significance both in uncovering previously missed effects, and in revealing aspects of human cognition that are subject to considerable population variability [@rouder2020a; @rouder2021a; @bolger2019a].
 
-Previously, Rouder & Haaf [-@rouder2021a] suggested that such qualitative individual differences may be expected in preference or bias-based effects (e.g., @schnuerch2021a; @rouder2021a), but not in effects that are driven by low-level perceptual and attentional processes. Consistent with this proposal, the absence of substantial evidence for variability in effect signs in unconscious processing was paralleled by strong evidence for such qualitative inter-individual differences in subjective confidence ratings (e.g., some participants are more confident in classifying a grating as oriented to the right, while others show the opposite preference)^[As we note above, since in most of these studies responses and stimuli are closely correlated, these effects cannot be unambiguously attributed to stimulus preferences or response priming effects. Relatedly, more recent work reveals that such inter-individual differences in preference for specific responses or stimuli can be traced back to heterogeneity in sensory encoding @rahnev2021a]. However, robust participant-level effects were masked by qualitative individual differences in other domains too, not all of them relate to higher-level preferences or biases. For example, non-directional effects of distractor presence were found in a series of visual search experiments (@adam2021a; sign consistency > `r apa_num(100*min(ns_adam_res$signcon.statistic))`%, p $<$`r apa_p(ceiling(max(ns_adam_res$signcon.p * 100))/100)`, for four out of eight measured effects). These findings echo the non-directional effects of distractor-target compatibility on action planning that were revealed using the OANOVA test [@miller2018a], and were not detected when using standard directional analysis (in both @machado2007a and @machado2009a). Thus, aside from shedding light on previous non-significant results, our preliminary findings inform previous claims regarding the plausibility of population heterogeneity in effect signs in perceptual and attentional effects in general, providing some indication that such effects may be more prevalent than previously assumed.
+Previously, Rouder & Haaf [-@rouder2021a] suggested that such qualitative individual differences may be expected in preference or bias-based effects (e.g., @schnuerch2021a; @rouder2021a), but not in effects that are driven by low-level perceptual and attentional processes. Consistent with this proposal, the absence of substantial evidence for variability in effect signs in unconscious processing was paralleled with strong evidence for such qualitative inter-individual differences in subjective confidence ratings (e.g., some participants are more confident in classifying a grating as oriented to the right, while others show the opposite preference)^[As we note above, since in most of these studies responses and stimuli are closely correlated, these effects cannot be unambiguously attributed to stimulus preferences or response priming effects. Relatedly, more recent work reveals that such inter-individual differences in preference for specific responses or stimuli can be traced back to heterogeneity in sensory encoding @rahnev2021a]. However, robust participant-level effects were masked by qualitative individual differences in other domains too, not all of them relate to higher-level preferences or biases. For example, non-directional effects of distractor presence were found in two visual search experiments (@adam2021a; sign consistency > `r apa_num(100*min(ns_adam_res$signcon.statistic))`%, p $<$`r apa_p(ceiling(max(ns_adam_res$signcon.p * 100))/100)`, for `r xfun::numbers_to_words(nrow(ns_adam_res))` out of `r xfun::numbers_to_words(nrow(all_ns_adam_res))` measured effects). These findings echo the non-directional effects of distractor-target compatibility on action planning that were revealed by @miller2018a. These effects were not detected when using standard directional analysis, yet show significant sign-consistency  (M = `r round(100* machado_2007_350$sc_statistic,2)`%, p `r apa_p(machado_2007_350$sc_p)`, for SOA of 350ms in @machado2007a, and M = `r round(100*machado_2009_650$sc_statistic,2)`%, p = `r apa_p(machado_2009_650$sc_p)`, for SOA of 650ms in @machado2009a). Thus, aside from shedding light on previous non-significant results, our preliminary findings inform previous claims regarding the plausibility of population heterogeneity in effect signs in perceptual and attentional effects in general, providing some indication that such effects may be more prevalent than previously assumed.
 
 To facilitate the adoption of this non-directional approach in experimental psychology, we release with this paper an R package with a simple-to-use implementation of our error-controlled and non-parametric sign consistency test ([https://github.com/mufcItay/signcon](https://github.com/mufcItay/signcon)). We note that unlike directional tests, the validity of the sign consistency test (and more generally, non-directional tests) depends on counterbalancing of confounding variables not only across participants, but also across trials within a single participant. We recommend using this test to complement standard, directional tests, especially in interpreting null findings at the group level (see Box A for a more detailed description of best-practice recommendations for non-directional testing). This seems especially important in the field of unconscious processing, where null results are becoming more prevalent, and carry theoretical significance as hinting at possible functional roles for conscious processing.
 

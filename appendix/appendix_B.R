@@ -15,18 +15,15 @@ sigma_b = 2
 sigma_w <- 10
 mu = c(0, 1)
 # defines the number of simulations
-max_seed <- 10^3
-seeds <- 1:max_seed
-results_cols <- c(paste('sc', c('p','stat'),sep = '_'),
-                  paste('pbt', c('low_hdi95', 'high_hdi95', 'MAP'),sep = '_'))
+n_iterations <- 10^3
 # note that we feed the initialization function with N_t /2 because it expects
 # the number of trials per condition (we use two conditions)
-apndx_b_conf <- initialize_simulation(N_p, N_t/2, sigma_b, sigma_w, mu, max_seed, 
+apndx_b_conf <- initialize_simulation(N_p, N_t/2, sigma_b, sigma_w, mu, n_iterations, 
                               results_cols = results_cols)
 # define the power analysis function
 power_analysis <- function(conf, params, df, seed) {
   # run the sign-consistency and PBT tests
-  res_sc <- test_sign_consistency(df, idv = 'idv', iv = 'iv', dv = 'dv')
+  res_sc <- test_sign_consistency(df, idv = 'idv', iv = 'iv', dv = 'dv', perm_repetitions = 100)
   res_pbt <- run_pbt(df, pbt_test_f)
   # return the statistics of interest to store in the results data frame 
   return(c(res_sc[c('p', 'statistic')], 
@@ -60,8 +57,8 @@ save_plot_appendixB <- function(results_summary) {
   plt_appendix_B <- results_summary %>%
     mutate(Power = round(100 * Power),
            Test = factor(Test),
-           mu = factor(ifelse(mu == 0, 'Non-directional differences',
-                              'Directional effect ')),
+           mu = factor(ifelse(mu == 0, 'Non-directional differences','Directional effect'), 
+                       levels = c('Directional effect', 'Non-directional differences')),
            N_p = factor(N_p),
            N_t = factor(N_t)) %>%
     ggplot(aes(fill=Power, 
@@ -72,7 +69,7 @@ save_plot_appendixB <- function(results_summary) {
     theme_minimal() + 
     xlab(expression(N[p])) +
     ylab(expression(N[t])) + 
-    scale_fill_gradientn(colors=c('red',"grey", 'blue'),
+    scale_fill_gradientn(colors=c("seashell1", 'lightblue', 'royalblue1' ,'royalblue4'),
                          guide = 'colorbar') +
     facet_grid(vars(Test), vars(mu)) +
     theme(strip.background = element_rect(fill = "white"),
