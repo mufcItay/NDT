@@ -24,7 +24,6 @@ get_dvs <- function(subj_true_effect, iv, wSEsd, trials_per_cnd,
     # (see equations 4 and 5, which were further expanded)
     lambda_base <- get_wald_lambda(baseline_mu, wSEsd)
     lambda_effect <- get_wald_lambda(baseline_mu, wSEsd)
-    
     # sample effects for each subject and trial
     subj_true_effect_per_trial <- rep(subj_true_effect, each = trials_per_cnd)
     # set the dependent variable columns according the true effect, and the indepdent variable

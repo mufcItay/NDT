@@ -29,18 +29,20 @@ add_simulation_results <- function(emp_data) {
   gn_df <- data.frame(exp = rep('GN', n_null_samples),
                       signcon.null_dist = sign_con_sn$null_dist)
   gn_df$quid_bf <- 1/sn_bf
-  gn_df$pbt.MAP <- sn_pbt_res$MAP
-  gn_df$pbt.low <- sn_pbt_res$low
-  gn_df$pbt.high <- sn_pbt_res$high
+  gn_df$gnt.p <- sn_gnt_res$p
+  gn_df$gnt.stat <- sn_gnt_res$stat
+  gn_df$gnt.ci_low <- sn_gnt_res$ci_low
+  gn_df$gnt.ci_high <- sn_gnt_res$ci_high
   gn_df$oanova.p <- sn_OANOVA_res$p
   gn_df$signcon.p <- sign_con_sn$p
   gn_df$signcon.statistic <- sign_con_sn$statistic
   nd_df <- data.frame(exp = rep('ND', n_null_samples),
                       signcon.null_dist = sign_con_nde$null_dist)
   nd_df$quid_bf <- 1/nde_bf
-  nd_df$pbt.MAP <- nde_pbt_res$MAP
-  nd_df$pbt.low <- nde_pbt_res$low
-  nd_df$pbt.high <- nde_pbt_res$high
+  nd_df$gnt.p <- nde_gnt_res$p
+  nd_df$gnt.stat <- nde_gnt_res$stat
+  nd_df$gnt.ci_low <- nde_gnt_res$ci_low
+  nd_df$gnt.ci_high <- nde_gnt_res$ci_high
   nd_df$oanova.p <- nde_OANOVA_res$p
   nd_df$signcon.p <- sign_con_nde$p
   nd_df$signcon.statistic <- sign_con_nde$statistic
@@ -263,20 +265,21 @@ generate_OANOVA_plot <- function(data, graphics_conf, alpha = .05, eps = 10^-3) 
   return (res_plt)
 }
 
-#' generate_pbt_plot
-#' The function generates the PBT results sub-plot
-#' @param data a dataframe with the results of the PBT solution. The shape of 
-#' the dataframe is (#Datasets) X (exp, pbt.low, pbt.high, pbt.MAP), where 'exp' is the name of 
-#' the experiment (and respective dataset), 'pbt.low' and 'pbt.high' are the lower,
-#' and higher bounds of the HDI according to the solution, and 'pbt.MAP' is the
-#' maximum a posteriori estimate of prevalence. 
+#' generate_gnt_plot
+#' The function generates the GNT results sub-plot
+#' @param data a dataframe with the results of the GNT solution. The shape of 
+#' the dataframe is (#Datasets) X (exp, gnt.p, gnt.stat, gnt.ci_low, gnt.ci_high), where 'exp' is the name of 
+#' the experiment (and respective dataset), 'gnt.ci_low' and 'gnt.ci_high' are the lower,
+#' and higher bounds on prevalence, gnt.stat is the prevalence statistic and 'gnt.p' is the
+#' p value for the test against zero prevalence (global null) 
 #' @param graphics_conf a list with different graphics configurations to be used by
-#' @return the plot describing the results of the PBT test
-generate_pbt_plot <- function(data, graphics_conf) {
+#' @return the plot describing the results of the GNT test
+generate_gnt_plot <- function(data, graphics_conf) {
+  alpha <- .05
   n_sim <- sum(data$is_sim)
   data_sim_rect <- data.frame(xmin = .75, xmax = n_sim + .25, 
-                              ymin = 100*min(data$pbt.low), ymax = 100*max(data$pbt.high))
-  data$effect <- data$pbt.low > 0
+                              ymin = 100*min(data$gnt.ci_low), ymax = 100*max(data$gnt.ci_high))
+  data$effect <- data$gnt.p < alpha
   exp_label_colors <- sapply(data$effect, function(e) ifelse(e, graphics_conf$significant_color, 'black'))
   exp_label_face <- sapply(data$effect, function(e) ifelse(e, "bold","plain"))
   plt <- ggplot(data, aes(x = exp, fill = effect, shape = is_sim)) +
@@ -284,11 +287,13 @@ generate_pbt_plot <- function(data, graphics_conf) {
                                         ymin = ymin, ymax = ymax, shape = NULL), 
               fill = graphics_conf$sim_rect_color, alpha = .5) +
     geom_hline(yintercept = 0) +
-    geom_errorbar(aes(ymin  = pbt.low * 100, ymax  = pbt.high*100),
-                  width = .15, linewidth  = 1.5) +
-    geom_point(aes(y = pbt.MAP*100), size = 5, colour = 'black', stroke =2,
+    geom_hline(yintercept = 100 * alpha, linetype='solid', 
+               linewidth = 1.5, color = graphics_conf$pale_color) +
+    geom_errorbar(aes(ymin=gnt.ci_low * 100, ymax=gnt.ci_high*100),
+                  width = .75, linewidth  = 1) +
+    geom_point(aes(y = gnt.stat*100), size = 5, colour = 'black', stroke =2,
                fill = ifelse(data$effect, graphics_conf$significant_color,
-                             ifelse(data$pbt.MAP > 0,graphics_conf$med_color,
+                             ifelse(data$gnt.stat > 0,graphics_conf$med_color,
                               graphics_conf$null_support_color))) +
     scale_shape_manual(values = graphics_conf$shapes_per_sim) +
     xlab('Experiment') +
@@ -356,11 +361,11 @@ n_effect <- length(unique(uc_effect_results$exp))
 n_ns <- length(unique(uc_ns_results$exp))
 
 # generate dataframes for analyses
-# PBT
-ns_pbt_res <- uc_ns_results %>% group_by(exp) %>% summarise_all(first) %>%
-  dplyr::select(exp, pbt.high,pbt.low, pbt.MAP, is_sim)
-effect_pbt_res <- uc_effect_results %>% group_by(exp) %>% summarise_all(first) %>%
-  dplyr::select(exp, pbt.high,pbt.low, pbt.MAP, is_sim)
+# GNT
+ns_gnt_res <- uc_ns_results %>% group_by(exp) %>% summarise_all(first) %>%
+  dplyr::select(exp, gnt.ci_high,gnt.ci_low, gnt.stat, gnt.p, is_sim)
+effect_gnt_res <- uc_effect_results %>% group_by(exp) %>% summarise_all(first) %>%
+  dplyr::select(exp, gnt.ci_high,gnt.ci_low, gnt.stat, gnt.p, is_sim)
 # QUID
 ns_results_quid <- uc_ns_results[uc_ns_results$is_quid_valid == TRUE,] %>% 
   group_by(exp) %>% summarise_all(first)
@@ -421,27 +426,27 @@ graphics_conf <- list(title_size = 30, size_seg = 2,
                       seps_angle = 30, seps_lw = .7, seps_length = .1)
 
 
-# generate the PBT sub-plot
-graphics_conf$title = 'Prevalence Bayesian Test (PBT)'
-ns_plt_pbt <- generate_pbt_plot(ns_pbt_res,graphics_conf)
-ns_plt_pbt
-effect_plt_pbt <- generate_pbt_plot(effect_pbt_res,graphics_conf)
-effect_plt_pbt
+# generate the GNT sub-plot
+graphics_conf$title = 'Global Null Test (GNT)'
+ns_plt_gnt <- generate_gnt_plot(ns_gnt_res,graphics_conf)
+ns_plt_gnt
+effect_plt_gnt <- generate_gnt_plot(effect_gnt_res,graphics_conf)
+effect_plt_gnt
 
-# PBT stats
-ns_n_effect_MAP <- sum(ns_pbt_res$pbt.MAP > 0)
-ns_n_null_MAP <- nrow(ns_pbt_res) - ns_n_effect_MAP 
-paste('NS Effects (PBT):')
-paste('N_Total, N_Effect, N_Null =', ns_n_effect_MAP + ns_n_null_MAP, ',',
-      ns_n_effect_MAP, ',', ns_n_null_MAP)
-paste('Max, Med, IQR (MAP) =', max(ns_pbt_res$pbt.MAP), median(ns_pbt_res$pbt.MAP),
-      IQR(ns_pbt_res$pbt.MAP))
-effect_n_effect_MAP <- sum(effect_pbt_res$pbt.MAP > 0)
-effect_n_null_MAP <- nrow(effect_pbt_res) - effect_n_effect_MAP 
-paste('Directional Effects (PBT):')
-paste('N_Total, N_Effect, N_Null =', effect_n_null_MAP + effect_n_effect_MAP, ',',
-      effect_n_null_MAP, ',', effect_n_effect_MAP)
-paste('Max, Med (MAP) =', max(effect_pbt_res$pbt.MAP), median(effect_pbt_res$pbt.MAP))
+# GNT stats
+ns_n_effect_stat <- sum(ns_gnt_res$gnt.stat > 0)
+ns_n_null_stat <- nrow(ns_gnt_res) - ns_n_effect_stat 
+paste('NS Effects (GNT):')
+paste('N_Total, N_Effect, N_Null =', ns_n_effect_stat + ns_n_null_stat, ',',
+      ns_n_effect_stat, ',', ns_n_null_stat)
+paste('Max, Med, IQR (STAT) =', max(ns_gnt_res$gnt.stat), median(ns_gnt_res$gnt.stat),
+      IQR(ns_gnt_res$gnt.stat))
+effect_n_effect_stat <- sum(effect_gnt_res$gnt.stat > 0)
+effect_n_null_stat <- nrow(effect_gnt_res) - effect_n_effect_stat 
+paste('Directional Effects (GNT):')
+paste('N_Total, N_Effect, N_Null =', effect_n_null_stat + effect_n_effect_stat, ',',
+      effect_n_null_stat, ',', effect_n_effect_stat)
+paste('Max, Med (STAT) =', max(effect_gnt_res$gnt.stat), median(effect_gnt_res$gnt.stat))
 
 # generate the QUID sub-plot
 graphics_conf$title <- 'Qualitative Individual Differences (QUID)'
@@ -491,26 +496,26 @@ paste('NS Effects (OANOVA Test):')
 paste('N_Total, N_Effect, N_Null =', ns_n_null + ns_n_effect, ',',
       ns_n_effect, ',', ns_n_null)
 
-# generate the NDT sub-plot
+# generate the signcon NDT sub-plot
 graphics_conf$title <- 'Sign-Consistency (%)'
-ns_plt_nondir <- generate_signcon_plot(ns_nondir_res,graphics_conf)
-ns_plt_nondir
-effect_plt_nondir <- generate_signcon_plot(effect_nondir_res,graphics_conf)
-effect_plt_nondir
+ns_plt_signcon <- generate_signcon_plot(ns_nondir_res,graphics_conf)
+ns_plt_signcon
+effect_plt_signcon <- generate_signcon_plot(effect_nondir_res,graphics_conf)
+effect_plt_signcon
 
 
-# generate the non directional test figure
+# generate the non directional sign consistency test figure
 graphics_conf$title <- 'Sign-Consistency (%)'
-plt_nondir <- generate_signcon_plot(nondir_res_all,graphics_conf)
-plt_nondir
+plt_signcon <- generate_signcon_plot(nondir_res_all,graphics_conf)
+plt_signcon
 
-# aggregate together the available tests results (PBT, QUID, OANOVA)
+# aggregate together the available tests results (GNT, QUID, OANOVA)
 # ns directional
-ns_plt_pbt <- ns_plt_pbt + labs(tag = "A") + theme(plot.tag = element_text(size = 30))
+ns_plt_gnt <- ns_plt_gnt + labs(tag = "A") + theme(plot.tag = element_text(size = 30))
 ns_plt_quid <- ns_plt_quid + labs(tag = "B")  + theme(plot.tag = element_text(size = 30))
 ns_plt_OANOVA <- ns_plt_OANOVA + labs(tag = "C")  + theme(plot.tag = element_text(size = 30))
 
-ns_plt_available <- grid.arrange(arrangeGrob(ns_plt_pbt, nrow = 1, widths = c(1)),
+ns_plt_available <- grid.arrange(arrangeGrob(ns_plt_gnt, nrow = 1, widths = c(1)),
                           arrangeGrob(ns_plt_quid, nrow = 1, 
                                       widths = c(ns_n_quid/n_ns + .025,1-ns_n_quid/n_ns - .025)),
                           arrangeGrob(ns_plt_OANOVA, nrow = 1, 
@@ -520,10 +525,10 @@ ggsave(paste(plots_fld, 'ns_available_methods_res.svg', sep = .Platform$file.sep
 ggsave(paste(plots_fld, 'ns_available_methods_res.png', sep = .Platform$file.sep),
        width=15, height=15,plot = ns_plt_available, dpi = 500)
 # effect plot
-effect_plt_pbt <- effect_plt_pbt + labs(tag = "A") + theme(plot.tag = element_text(size = 20))
+effect_plt_gnt <- effect_plt_gnt + labs(tag = "A") + theme(plot.tag = element_text(size = 20))
 effect_plt_quid <- effect_plt_quid + labs(tag = "B")  + theme(plot.tag = element_text(size = 20))
 effect_plt_OANOVA <- effect_plt_OANOVA + labs(tag = "C")  + theme(plot.tag = element_text(size = 20))
-effect_plt_available <- grid.arrange(arrangeGrob(effect_plt_pbt, nrow = 1, widths = c(1)),
+effect_plt_available <- grid.arrange(arrangeGrob(effect_plt_gnt, nrow = 1, widths = c(1)),
                              arrangeGrob(effect_plt_quid, nrow = 1, 
                                          widths = c(effect_n_quid/n_effect + .025,1-effect_n_quid/n_effect - .025)),
                              arrangeGrob(effect_plt_OANOVA, nrow = 1, 
@@ -535,11 +540,11 @@ ggsave(paste(plots_fld, 'effect_available_methods_res.png', sep = .Platform$file
 
 # save the signcon test results
 ggsave(paste(plots_fld, 'ns_plt_sign_con__res.svg', sep = .Platform$file.sep),
-       width=20, height=9,plot = ns_plt_nondir)
+       width=20, height=9,plot = ns_plt_signcon)
 ggsave(paste(plots_fld, 'ns_plt_sign_con__res.png', sep = .Platform$file.sep),
-       width=15, height=6,plot = ns_plt_nondir, dpi = 500)
+       width=15, height=6,plot = ns_plt_signcon, dpi = 1000)
 ggsave(paste(plots_fld, 'effect_plt_sign_con__res.svg', sep = .Platform$file.sep),
-       width=15, height=6,plot = effect_plt_nondir)
+       width=15, height=6,plot = effect_plt_signcon)
 ggsave(paste(plots_fld, 'effect_plt_sign_con__res.png', sep = .Platform$file.sep),
-       width=15, height=6,plot = effect_plt_nondir, dpi = 500)
+       width=15, height=6,plot = effect_plt_signcon, dpi = 1000)
 

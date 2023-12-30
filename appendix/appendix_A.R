@@ -9,7 +9,7 @@ source(paste(apdx_fld, 'appendix_utils.R', sep = .Platform$file.sep))
 apndxA_alpha <- 0.05
 
 ## define the common simulation parameters
-results_cols <- c('QUID', 'OANOVA', 'SC')
+results_cols <- c('QUID', 'OANOVA')
 # number of trials
 N_t <- 100
 # we assume that the equal variance condition sigma_w is lower than the sigma_w
@@ -19,7 +19,7 @@ sigma_w_unequal = 1000
 sigma_w <- c(sigma_w_equal, sigma_w_unequal)
 mu <- 0
 # defines the number of simulations
-n_iterations <- 100
+n_iterations <- 250
 # calculate expected CI for p=.05
 random_binom_CI_alpha <- qbinom(c(apndxA_alpha/2,1-apndxA_alpha/2), 
                                 n_iterations, apndxA_alpha)
@@ -33,8 +33,8 @@ apndxA_conf_FAs <- initialize_simulation(N_p_FAs, N_t, sigma_b_FAs, sigma_w, mu,
 N_p_sensitivity <- 30
 sigma_b_sensitivity = 15
 apndxA_conf_sensitivity <- initialize_simulation(N_p_sensitivity, N_t, 
-                                          sigma_b_sensitivity, sigma_w, mu, 
-                                          n_iterations, results_cols)
+                                                 sigma_b_sensitivity, sigma_w, mu, 
+                                                 n_iterations, results_cols)
 
 # define analysis function (common for both analyses)
 variability_analysis <- function(conf, params, df, seed) {
@@ -43,18 +43,16 @@ variability_analysis <- function(conf, params, df, seed) {
   equal_var_value <- min(conf$params$sigma_w)
   if(params$sigma_w != equal_var_value) {
     equal_var_df <- generate_dataset(p_mean = 0, p_sd = params$sigma_b, 
-                                    N = params$N_p, trials_per_cnd = params$N_t, 
-                                    wSEsd = equal_var_value, 
-                                      seed = seed)
-      df[df$idv%in% seq(1,params$N_p -1), 'dv'] <- 
-        equal_var_df[equal_var_df$idv%in% seq(1, params$N_p -1), 'dv']
+                                     N = params$N_p, trials_per_cnd = params$N_t, 
+                                     wSEsd = equal_var_value, 
+                                     seed = seed)
+    df[df$idv%in% seq(1,params$N_p -1), 'dv'] <- 
+      equal_var_df[equal_var_df$idv%in% seq(1, params$N_p -1), 'dv']
   }
-  # run all tests
-  SC <- signcon::test_sign_consistency(df, idv = 'idv', iv = 'iv', dv = 'dv',
-                                        perm_repetitions = 100)
+  # # run both tests
   QUID <- run_quid(df)
   OANOVA <- run_oanova_test(df)
-  return(c(1 / QUID$quid_bf, OANOVA$p, SC$p))
+  return(c(1 / QUID$quid_bf, OANOVA$p))
 }
 
 # run both simulations
@@ -79,36 +77,26 @@ analyze_appendix_A <- function(results_df, alpha = .05, bf_criteria = 3) {
     mutate(Condition = factor(sigma_w),
            Analysis = factor(sigma_b),
            Result_QUID = as.numeric(QUID),
-           Result_OANOVA = as.numeric(OANOVA),
-           Result_SC = as.numeric(SC))
+           Result_OANOVA = as.numeric(OANOVA))
   
   # analyze QUID's results (% of iterations with moderate evidence in 
   # each analysis X condition combination)
   analysis_quid <- results_df %>%
-    group_by(Analysis, Condition) %>%
-    summarise(sig_QUID = ifelse(Result_QUID <= bf_criteria_low, 'H0',
-                                ifelse(Result_QUID >= bf_criteria_high, 'H1',
-                                       'Inconclusive'))) %>%
+    mutate(sig_QUID = factor(ifelse(Result_QUID <= bf_criteria_low, 'H0',
+                                    ifelse(Result_QUID >= bf_criteria_high, 'H1',
+                                           'Inconclusive')))) %>%
     group_by(Analysis, Condition,sig_QUID) %>%
-    summarise(sig_prop = 100 * n() / (max(results_df$seeds) - min(results_df$seeds) + 1))
-
+    summarise(sig_prop = 100 * n() / (max(results_df$seeds) - min(results_df$seeds) + 1)) %>%
+    complete(sig_QUID, fill = list(sig_prop = 0))
+  
   # analyze the OANOVA test's results (% of iterations with significant effects in 
   # each analysis X condition combination)
   analysis_OANOVA <- results_df %>%
-    group_by(Analysis, Condition) %>%
-    summarise(sig_OANOVA = Result_OANOVA <= alpha) %>%
+    mutate(sig_OANOVA = factor(Result_OANOVA <= alpha)) %>%
     group_by(Analysis, Condition,sig_OANOVA) %>%
-    summarise(sig_prop = 100 * n() / (max(results_df$seeds) - min(results_df$seeds) + 1))
-  
-  # analyze sign consistency test results (% of iterations with significant effects in  # each analysis X condition combination)
-  analysis_SC <- results_df %>%
-    group_by(Analysis, Condition) %>%
-    summarise(sig_SC = Result_SC <= alpha) %>%
-    group_by(Analysis, Condition,sig_SC) %>%
-    summarise(sig_prop = 100 * n() / (max(results_df$seeds) - min(results_df$seeds) + 1))
-  
+    summarise(sig_prop = 100 * n() / (max(results_df$seeds) - min(results_df$seeds) + 1)) %>%
+    complete(sig_OANOVA, fill = list(sig_prop = 0))
   
   return(list(quid_res = analysis_quid, 
-              oanova_res = analysis_OANOVA,
-              sc_res = analysis_SC))
+              oanova_res = analysis_OANOVA))
 }

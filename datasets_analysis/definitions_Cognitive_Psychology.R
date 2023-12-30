@@ -44,15 +44,9 @@ get_sum_fs_cogdb <- function(analysis_conf, experiments) {
       }
       } else {
         summary_f <- function(mat) {
-          # if the data is not arranged as a matrix, rearrange and apply summary f
-          if(is.null(dimnames(mat))) {
-            return(analysis_conf@summary_f(as.numeric(t(mat)[,'dv'])))
-          }
-          return (analysis_conf@summary_f(as.numeric(mat[,'dv'])))
+          return (analysis_conf@summary_f(as.numeric(mat$dv)))
         }
         test_f <- function(mat) {
-          mat <- as.data.frame(mat)
-
           return(t.test(mat[mat$iv==unique(mat$iv)[1],]$dv,
                              mat[mat$iv==unique(mat$iv)[2],]$dv)$p.value)
         }

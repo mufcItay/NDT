@@ -40,14 +40,14 @@ prevalence_test <- function(data, H0 = 0, alpha = .05, test_function = ttest_tf)
   prev_results <- data %>%
     mutate(iv = factor(iv)) %>%
     group_by(idv) %>%
-    do(summarise(., sig = summary_function(.) < alpha)) %>%
+    do(summarise(., sig = test_function(.) <= alpha)) %>%
     summarise(S = sum(sig), N = n()) %>%
-    select(S,N) %>%
+    dplyr::select(S,N) %>%
     summarise_all(sum) %>%
-    summarise(pval = 1- pbinom(S, N, sig_rate),
+    summarise(pval = binom.test(S, N, sig_rate, alternative = "greater")$p.value,
               stat = S/N,
-              ci_low = qbinom(alpha/2, N, sig_rate),
-              ci_high = qbinom(1 - alpha/2, N, sig_rate))
+              ci_low = binom.test(S, N, sig_rate, alternative = "greater")$conf.int[1],
+              ci_high = binom.test(S, N, sig_rate, alternative = "greater")$conf.int[2])
   return(list(p = prev_results$pval, stat = prev_results$stat,
               ci_low = prev_results$ci_low, ci_high = prev_results$ci_high))
 }
@@ -71,7 +71,7 @@ prevalence_test <- function(data, H0 = 0, alpha = .05, test_function = ttest_tf)
 #'   \item ci_low - the lower bound of a confidence interval (CI) on prevalence under H0.
 #'   \item ci_high - the higher bound of a confidence interval (CI) on prevalence under H0.
 #' }
-run_gnt <- function(data, alpha = .05, summary_function = ttest_tf)  {
+run_gnt <- function(data, test_function = ttest_tf, alpha = .05)  {
   # run the prevalence test, setting H0 to zero.
-  return(prevalence_test(data, H0 = 0, alpha = alpha, summary_function = summary_function))
+  return(prevalence_test(data, H0 = 0, alpha = alpha, test_function = test_function))
 }

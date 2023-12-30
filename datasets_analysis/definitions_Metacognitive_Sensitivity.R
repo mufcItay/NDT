@@ -10,12 +10,10 @@ source(paste('datasets_analysis', 'definitions.R',
 #' are not as expected
 #' @return the calculated AUC measure
 get_AUC <- function(mat, summary_f_args = list(iv = 'iv2', dv = 'dv')){
-  mat <- as.data.frame(mat)
   # missing data
   if(length(colnames(mat)) <2) {
     return(NA)
   }
-
   accuracy <- mat[,summary_f_args$iv]
   if(length(unique(accuracy)) < 2) {
     # not enough accuracy levels
@@ -67,8 +65,8 @@ get_sum_fs_AUC <- function(analysis_conf, experiments) {
       conds <- sort(unique(mat$iv))
       mat_cond_1 <- mat[mat$iv == conds[1],c('iv2','dv')]
       mat_cond_2 <- mat[mat$iv == conds[2],c('iv2','dv')]
-      obs <- analysis_conf@summary_f(mat_cond_1) -
-        analysis_conf@summary_f(mat_cond_2)
+      obs <- analysis_conf@summary_f(as.data.frame(mat_cond_1)) -
+        analysis_conf@summary_f(as.data.frame(mat_cond_2))
       return(perm_test_subject(as.data.frame(mat), obs, summary_f = analysis_conf@summary_f,
                                summary_f_args = list(iv = 'iv', iv2 = 'iv2', dv = 'dv')))
     }

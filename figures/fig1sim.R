@@ -54,7 +54,7 @@ prepare_data <- function(data, ci_percentile = 5) {
   percentile_cols <- c('low', 'med', 'high') 
   data_ps <-   data %>%
     group_by(idv,iv) %>%
-    summarise(q = percentile_cols,
+    reframe(q = percentile_cols,
               RT = mean(dv) + sd(dv)/sqrt(n()) * qnorm(p = c(.025,0.5,.975), 0,1))%>%
     spread(q,RT)
   # split to conditions and add subject idv column
@@ -82,10 +82,10 @@ generate_effects_plot <- function(data, graphics_conf) {
     ylab('Subject') +
     xlim(-50,50) +
     geom_point(size = 3) +
-    geom_hline(yintercept = data$idv + graphics_conf$margin_y_subj, 
-               size = graphics_conf$size_seg/2, linetype='dotted', 
+    geom_hline(yintercept = head(data$idv,-1) + graphics_conf$margin_y_subj, 
+               linewidth = graphics_conf$size_seg/2, linetype='dotted', 
                col = graphics_conf$color_spreading_lines) +
-    geom_vline(xintercept = 0,  size = graphics_conf$vline_size) +
+    geom_vline(xintercept = 0,  linewidth = graphics_conf$vline_size) +
     theme_classic() +
     theme(legend.position = 'none',
           axis.text = element_text(size = graphics_conf$x_text_size),
@@ -93,10 +93,10 @@ generate_effects_plot <- function(data, graphics_conf) {
           axis.title.y = element_blank(),
           axis.text.y = element_blank(),
           axis.ticks.y = element_blank(),
-          axis.title.x = element_text(size = graphics_conf$x_title_size, vjust = 2),
-          plot.margin = (unit(c(.5, .5, .75, .5), "cm"))) +
-    ylim(1, nrow(data)) +
-    scale_y_continuous(breaks = c(1,seq(5, nrow(data), by = 5)))
+          axis.title.x = element_text(size = graphics_conf$x_title_size,
+                                      margin = margin(t = 15))
+          ) +
+    scale_y_continuous(limits = c(1 - graphics_conf$margin_y_subj, nrow(data) + graphics_conf$margin_y_subj), breaks = c(1,seq(5, nrow(data), by = 5)))
   return (plt)
 }
 
@@ -115,20 +115,20 @@ generate_effects_plot <- function(data, graphics_conf) {
 generate_ps_plot <- function(data_ps_cong, data_ps_incong, graphics_conf) {
   plt <- ggplot(data_ps_cong, aes(y = idv)) +
     geom_segment(data = data_ps_incong, aes(x = low, xend = high, y = idv + graphics_conf$margin_y_conds, yend = idv + graphics_conf$margin_y_conds),
-                 size = graphics_conf$size_seg, colour = graphics_conf$incong_color) +
+                 linewidth = graphics_conf$size_seg, colour = graphics_conf$incong_color) +
     geom_segment(data = data_ps_cong, aes(x = low, xend = high, y = idv - graphics_conf$margin_y_conds, 
                                           yend = idv - graphics_conf$margin_y_conds), 
-                 size = graphics_conf$size_seg, colour = graphics_conf$cong_color) +
+                 linewidth = graphics_conf$size_seg, colour = graphics_conf$cong_color) +
     geom_segment(data = data_ps_incong, aes(x = med - graphics_conf$legnth_med, xend = med + graphics_conf$legnth_med,  y = idv + graphics_conf$margin_y_conds, 
                                             yend = idv + graphics_conf$margin_y_conds), 
-                 size = graphics_conf$size_seg, colour = graphics_conf$med_color) +
+                 linewidth = graphics_conf$size_seg, colour = graphics_conf$med_color) +
     geom_segment(data = data_ps_cong, aes(x = med - graphics_conf$legnth_med, xend = med + graphics_conf$legnth_med, y = idv - graphics_conf$margin_y_conds, 
                                           yend = idv - graphics_conf$margin_y_conds), 
-                 size = graphics_conf$size_seg, colour = graphics_conf$med_color) +
-    geom_hline(yintercept = data_ps_cong$idv + graphics_conf$margin_y_subj, 
-               size = graphics_conf$size_seg/2, linetype='dotted', 
+                 linewidth = graphics_conf$size_seg, colour = graphics_conf$med_color) +
+    geom_hline(yintercept = head(data_ps_cong$idv,-1) + graphics_conf$margin_y_subj, 
+               linewidth = graphics_conf$size_seg/2, linetype='dotted', 
                col = graphics_conf$color_spreading_lines) +
-    geom_vline(xintercept = mean(data_ps_cong$med),  size = graphics_conf$vline_size) +
+    geom_vline(xintercept = mean(data_ps_cong$med),  linewidth = graphics_conf$vline_size) +
     xlab('RT') +
     ylab('Subject') +
     xlim(600, 700) +
@@ -140,10 +140,8 @@ generate_ps_plot <- function(data_ps_cong, data_ps_incong, graphics_conf) {
           axis.text.y = element_blank(),
           axis.ticks.y = element_blank(),
           axis.line.y = element_blank(),
-          axis.title.x = element_text(vjust=-2) ,
-          plot.margin = (unit(c(.5, .5, .75, .5), "cm"))) +
-    ylim(1, nrow(data_ps_cong)) +
-    scale_y_continuous(breaks = c(1,seq(5, nrow(data_ps_cong), by = 5)))
+          axis.title.x = element_text(margin = margin(t = 15))) +
+    scale_y_continuous(limits = c(1 - graphics_conf$margin_y_conds, nrow(data_ps_cong) + graphics_conf$margin_y_conds), breaks = c(1,seq(5, nrow(data_ps_cong), by = 5)))
   return (plt)
 }
 
@@ -186,26 +184,28 @@ graphics_conf <- list(size_seg = 2, color_spreading_lines = '#B1C2CF',
                       margin_y_subj = 0.5, margin_y_conds = 0.125, legnth_med = 2,
                       incong_color = '#e41a1c', cong_color = '#377eb8', med_color = 'gray',
                       vline_size = 1, x_title_size = 22, x_text_size = 20)
-# generate nde plot
+# for illustration, add an RT offset
 offset_rt <- 650
+sim_seed <- 911
+# generate nde plot
 nde_sd_b <- 15
 nde_sd_w <- 30
 nde_n <- 15
 nde_trials <- 100
 nde_data <- generate_dataset(p_mean = 0, p_sd = nde_sd_b, N = nde_n,
                              trials_per_cnd = nde_trials, 
-                             wSEsd = nde_sd_w, dist_type = 'Wald',
-                             dv_offset = offset_rt)
-ratio <- generate_agg_plot(nde_data, graphics_conf, 'wald_nde_plt')
+                             wSEsd = nde_sd_w, dist_type = 'Normal',
+                             dv_offset = offset_rt, seed = sim_seed)
+ratio <- generate_agg_plot(nde_data, graphics_conf, 'nde_plt')
 sn_sd_b <- 0
 sn_sd_w <- 100
 sn_n <- 15
 sn_trials <- 100
 sn_data <- generate_dataset(p_mean = 0, p_sd = 0, N = 15, 
                             trials_per_cnd = 100, 
-                            wSEsd = 100, dist_type = 'Wald',
-                            dv_offset = offset_rt)
-generate_agg_plot(sn_data, graphics_conf, 'wald_sn_plt', ratio)
+                            wSEsd = 100, dist_type = 'Normal',
+                            dv_offset = offset_rt, seed = sim_seed)
+generate_agg_plot(sn_data, graphics_conf, 'sn_plt', ratio)
 
 # common analysis, two-sided t-test
 nde_t_test <- nde_data %>%
@@ -232,16 +232,16 @@ sn_quid_res <- run_quid(sn_data)
 nde_bf <- 1/ nde_quid_res$quid_bf
 sn_bf <- 1/ sn_quid_res$quid_bf
 
-#PBT
-source(paste('datasets_analysis', 'pbt.R', sep = .Platform$file.sep))
+#GNT
+source(paste('datasets_analysis', 'gnt.R', sep = .Platform$file.sep))
 t_f <- function(data) {
   conditions <- unique(data$iv)
   t_res <- t.test(data[data$iv == conditions[2],]$dv,
                   data[data$iv == conditions[1],]$dv)
   return(t_res$p.value)
 }
-nde_pbt_res <- run_pbt(nde_data, test_function = t_f)
-sn_pbt_res <- run_pbt(sn_data, test_function = t_f)
+nde_gnt_res <- run_gnt(nde_data, test_function = t_f)
+sn_gnt_res <- run_gnt(sn_data, test_function = t_f)
 
 # OANOVA Test
 oanova_alpha <- .05
@@ -251,27 +251,27 @@ sn_OANOVA_res <- run_oanova_test(sn_data)
 
 ## plot Kruschke style plots for the figure
 nde_b <- dists$normal
-nde_w <- dists$wald
-nde_w$ddist_params$lambda = get_wald_lambda(nde_w$ddist_params$mu, 100) 
+nde_w <- dists$normal
+nde_w$ddist_params$sd = nde_w$ddist_params$sd / 2 
 
 save_png <- function(fn, dist, labels) {
-  fn <- paste(plots_fld, paste0('wald_', '_', fn, '.png'), sep = .Platform$file.sep)
+  fn <- paste(plots_fld, paste0(fn, '.png'), sep = .Platform$file.sep)
   png(fn, width=165, height=123, bg="transparent", res=72, )
   plot_dist(dist, labels = labels, plot_dist_name = F)
   dev.off()
 }
 
 # upper panel - nde (non-directional effect)
-save_png('wald_nde_b', nde_b, c(mean = expression(N (0, sigma[b]))))
-save_png('wald_nde_w', nde_w, c(mean = expression(IG (0, lambda))))
+save_png('nde_b', nde_b, c(mean = expression(N (0, sigma[b]))))
+save_png('nde_w', nde_w, c(mean = expression(N (0, sigma[w]))))
 
 # left panel 
 sn_b <- dists$normal
 # set sd to a very low value (ideally zero would be used here)
 sn_b$ddist_params$sd = 0.0000001 
 sn_b$plot_type <- 'line'
-sn_w <- dists$wald
-sn_w$ddist_params$lambda = get_wald_lambda(sn_w$ddist_params$mu, 150) 
+sn_w <- dists$normal
+sn_w$ddist_params$sd = sn_w$ddist_params$sd * 2 
 # lower panel - sn (strong/global null)
-save_png('wald_sn_b', sn_b, c(mean = expression(delta (0))))
-save_png('wald_sn_w', sn_w, c(mean = expression(W (0, lambda))))
+save_png('sn_b', sn_b, c(mean = expression(delta(0))))
+save_png('sn_w', sn_w, c(mean = expression(N (0, sigma[w]))))

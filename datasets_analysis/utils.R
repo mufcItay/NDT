@@ -9,6 +9,8 @@ source(paste('datasets_analysis', 'pbt.R',
              sep = .Platform$file.sep))
 source(paste('datasets_analysis', 'oanova_test.R',
              sep = .Platform$file.sep))
+source(paste('datasets_analysis', 'gnt.R',
+             sep = .Platform$file.sep))
 
 #' get_input_df
 #' The function reads all datasets according to the 'analysis_conf' parameter to generate
