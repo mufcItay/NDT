@@ -1,136 +1,104 @@
 library(dplyr)
-library(ggplot2)
-library(stringr)
 library(tidyr)
-library(signcon)
+
+## APPENDIX B
 
 # source the utilities script
 apdx_fld <- 'appendix'
 source(paste(apdx_fld, 'appendix_utils.R', sep = .Platform$file.sep))
 
-## define the common simulation parameters
-results_cols <- c('SC_p', 'SC_statistic', 'GNT_p', 'GNT_ci_low', 'GNT_ci_high')
-# set power analysis parameter combinations
-N_p <- c(10, 30, 50) # the number of participants
-N_t <- c(50, 100, 500) # the number of experimental trials
-sigma_b = 1.5
-sigma_w <- 10
-mu = c(0, 1)
-# defines the number of simulations
-n_iterations <- 10^3
-# note that we feed the initialization function with N_t /2 because it expects
-# the number of trials per condition (we use two conditions)
-apndx_b_conf <- initialize_simulation(N_p, N_t/2, sigma_b, sigma_w, mu, n_iterations, 
-                                      results_cols = results_cols)
+#define alpha
+apndxB_alpha <- 0.05
 
-# define the power analysis function
-power_analysis <- function(conf, params, df, seed) {
-  # run the sign-consistency and GNT tests
-  res_sc <- test_sign_consistency(df, idv = 'idv', iv = 'iv', dv = 'dv', perm_repetitions = 100)
-  res_gnt <- run_gnt(df)
-  # return the statistics of interest to store in the results data frame
-  return(c(res_sc[c('p', 'statistic')],
-           res_gnt[c('p', 'ci_low', 'ci_high')]))
+## define the common simulation parameters
+results_cols <- c('QUID', 'OANOVA')
+# number of trials
+N_t <- 100
+# we assume that the equal variance condition sigma_w is lower than the sigma_w
+# used in the unequal variability condition
+sigma_w_equal = 1
+sigma_w_unequal = 1000
+sigma_w <- c(sigma_w_equal, sigma_w_unequal)
+mu <- 0
+# defines the number of simulations
+n_iterations <- 250
+# calculate expected CI for p=.05
+random_binom_CI_alpha <- qbinom(c(apndxB_alpha/2,1-apndxB_alpha/2), 
+                                n_iterations, apndxB_alpha)
+## define the specific simulation parameters
+# FAs simulation
+N_p_FAs <- 100
+sigma_b_FAs = 0
+apndxB_conf_FAs <- initialize_simulation(N_p_FAs, N_t, sigma_b_FAs, sigma_w, mu, 
+                                         n_iterations, results_cols)
+# Sensitivity simulation
+N_p_sensitivity <- 30
+sigma_b_sensitivity = 15
+apndxB_conf_sensitivity <- initialize_simulation(N_p_sensitivity, N_t, 
+                                                 sigma_b_sensitivity, sigma_w, mu, 
+                                                 n_iterations, results_cols)
+
+# define analysis function (common for both analyses)
+variability_analysis <- function(conf, params, df, seed) {
+  # get the low within participant sigma, which is the sigma used in the equal
+  # variance condition
+  equal_var_value <- min(conf$params$sigma_w)
+  if(params$sigma_w != equal_var_value) {
+    equal_var_df <- generate_dataset(p_mean = 0, p_sd = params$sigma_b, 
+                                     N = params$N_p, trials_per_cnd = params$N_t, 
+                                     wSEsd = equal_var_value, 
+                                     seed = seed)
+    df[df$idv%in% seq(1,params$N_p -1), 'dv'] <- 
+      equal_var_df[equal_var_df$idv%in% seq(1, params$N_p -1), 'dv']
+  }
+  # # run both tests
+  QUID <- run_quid(df)
+  OANOVA <- run_oanova_test(df)
+  return(c(1 / QUID$quid_bf, OANOVA$p))
 }
 
 # run both simulations
-run_appendixB <- function(conf) {
-  # get the power analysis results
-  results_df <- run_simulation(conf, power_analysis)
-  
-  # create a summary data frame for the results:
-  # count significant results
-  alpha <- .05
-  # data frame structure:
-  # (condition) X (sign-consistency and GNT significance)
-  results_summary <- results_df %>%
-    mutate(
-      SC = SC_p <= alpha,
-      GNT = GNT_p <= alpha,
-      N_t = N_t *2) %>% # switch from trials per condition to total #trials
-    group_by(mu, N_p, N_t) %>%
-    summarise_all(mean) %>%
-    gather(Test, Power, SC:GNT)
-  # save the summary of the results to file
-  save_results(results_summary, 'Appendix_B')
-  return(results_summary)
+run_appendixB <- function(conf_FAs, conf_sensitivity) {
+  results_df_FAs <- run_simulation(conf_FAs, variability_analysis)
+  results_df_sensitivity <- run_simulation(conf_sensitivity, variability_analysis)
+  # aggregate simulations results to a single data frame
+  results_df <- rbind(results_df_FAs, results_df_sensitivity)
+  # save the results to file
+  save_results(results_df, 'Appendix_B_QUID_OANOVA')
+  return(results_df)
 }
 
-
-save_plot_appendixB <- function(results_summary) {
-  # process summary table for plot
-  res_per_test_df <- results_summary %>%
-    mutate(Power = round(100 * Power),
-           Test = factor(Test),
-           mu = factor(ifelse(mu == 0, 'Non-directional differences','Directional effect'), 
-                       levels = c('Directional effect', 'Non-directional differences')),
-           N_p = factor(N_p),
-           N_t = factor(N_t))
+analyze_appendix_B <- function(results_df, alpha = .05, bf_criteria = 3) {
+  # analyze results - we use the bf_criteria to categorize iterations with
+  # moderate evidence for and against H0 (global null)
+  bf_criteria_high <- bf_criteria
+  bf_criteria_low <- 1/bf_criteria_high
+  # data frame structure:   rows      X ( Condition   ,    Analysis   , Result) 
+  #                      (iterations) X (equal/unequal, FA/Sensitivity, BF)
+  results_df <- results_df %>% 
+    mutate(Condition = factor(sigma_w),
+           Analysis = factor(sigma_b),
+           Result_QUID = as.numeric(QUID),
+           Result_OANOVA = as.numeric(OANOVA))
   
-  # plot the results
-  plt_appendix_B <- res_per_test_df %>%
-    ggplot(aes(fill=Power, 
-               x = N_p, y = N_t)) +
-    geom_tile(colour = 'black', linewidth = .5) +
-    geom_text(aes(label = as.character(Power)),
-              size = 7, color = 'black') +
-    theme_minimal() + 
-    xlab(expression(N[p])) +
-    ylab(expression(N[t])) + 
-    scale_fill_gradientn(colors=c("seashell1", 'lightblue', 'royalblue1' ,'royalblue4'),
-                         guide = 'colorbar') +
-    facet_grid(vars(Test), vars(mu)) +
-    theme(strip.background = element_rect(fill = "white"),
-          strip.text = element_text(color = 'black', size = 26),
-          axis.title = element_text(size = 26),
-          axis.text = element_text(size = 22),
-          panel.grid = element_blank(),
-          legend.title=element_text(size=26),
-          legend.text = element_text(size=22),
-          legend.position = 'bottom',
-          strip.placement = "outside",
-          panel.spacing=unit(.5, "lines")) +
-    guides(fill = guide_colourbar(barwidth = 20,
-                                  title="Power (%)"))
-  # save the plot
-  save_plot(plt_appendix_B, fn = 'Appendix_B')
+  # analyze QUID's results (% of iterations with moderate evidence in 
+  # each analysis X condition combination)
+  analysis_quid <- results_df %>%
+    mutate(sig_QUID = factor(ifelse(Result_QUID <= bf_criteria_low, 'H0',
+                                    ifelse(Result_QUID >= bf_criteria_high, 'H1',
+                                           'Inconclusive')))) %>%
+    group_by(Analysis, Condition,sig_QUID) %>%
+    summarise(sig_prop = 100 * n() / (max(results_df$seeds) - min(results_df$seeds) + 1)) %>%
+    complete(sig_QUID, fill = list(sig_prop = 0))
   
-  ## create a power difference plot
-  diffs_df <- res_per_test_df %>% 
-    group_by(N_t, N_p, mu) %>% 
-    summarise(Power = -diff(Power))
-  extreme_power_diff <- max(abs(diffs_df$Power))
-
-  plt_appendix_B_diffrences <- diffs_df %>%
-    ggplot(aes(fill=Power, 
-               x = N_p, y = N_t)) +
-    geom_tile(colour = 'black', linewidth = .5) +
-    geom_text(aes(label = as.character(Power)),
-              size = 7, color = 'black') +
-    theme_minimal() + 
-    xlab(expression(N[p])) +
-    ylab(expression(N[t])) + 
-    scale_fill_gradientn(colors=c("brown2", 'white', 'royalblue2'),
-                         guide = 'colorbar',
-                         breaks=c(-extreme_power_diff, 0, extreme_power_diff),
-                         limits=c(-extreme_power_diff, extreme_power_diff)) +
-    facet_grid(vars(mu)) +
-    theme(strip.background = element_rect(fill = "white"),
-          strip.text = element_text(color = 'black', size = 26),
-          axis.title = element_text(size = 26),
-          axis.text = element_text(size = 22),
-          panel.grid = element_blank(),
-          legend.title=element_text(size=26),
-          legend.text = element_text(size=22),
-          legend.position = 'bottom',
-          strip.placement = "outside",
-          panel.spacing=unit(.5, "lines")) +
-    guides(fill = guide_colourbar(barwidth = 20,
-                                  title="SC - GNT (%)"))
-  # save the plot
-  save_plot(plt_appendix_B_diffrences, fn = 'Appendix_B_Differences')
-  return(list(all_tests_plot = plt_appendix_B, 
-              diffs_plot = plt_appendix_B_diffrences))
+  # analyze the OANOVA test's results (% of iterations with significant effects in 
+  # each analysis X condition combination)
+  analysis_OANOVA <- results_df %>%
+    mutate(sig_OANOVA = factor(Result_OANOVA <= alpha)) %>%
+    group_by(Analysis, Condition,sig_OANOVA) %>%
+    summarise(sig_prop = 100 * n() / (max(results_df$seeds) - min(results_df$seeds) + 1)) %>%
+    complete(sig_OANOVA, fill = list(sig_prop = 0))
+  
+  return(list(quid_res = analysis_quid, 
+              oanova_res = analysis_OANOVA))
 }
-
-

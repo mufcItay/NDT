@@ -4,6 +4,11 @@ library(dplyr)
 get_df <- function(exp, folder_path) {
   folder <- paste(folder_path, paste('data',exp, sep = '_'), sep = .Platform$file.sep)
   fn_pattern <- ifelse(exp == 2007, '.DAT', '.txt')
+  # the data was shared with us privately, so if no datasets are
+  # available, just return statistics
+  if(dir.exists(folder) == FALSE) {
+    return(NA)
+  }
   fns <- list.files(folder, pattern = fn_pattern, full.names = TRUE)
   if(exp == 2007) {
     data <- do.call(rbind, lapply(fns, read.table, skip = 2, header = FALSE))
@@ -17,7 +22,19 @@ get_df <- function(exp, folder_path) {
 analyze_machado <- function(exp, folder_path) {
   # read the dataset
   data <- get_df(exp, folder_path)
-  
+  # the data was shared with us privately, so providing only statistics
+  if(is.na(data)) {
+    res <- data.frame(SOA = integer(), de_statistic = double(), de_p = double(),
+                      sc_statistic = double(), sc_p = double())
+    if(exp == 2007) {
+      res <- rbind(res, list(SOA = 350, de_statistic = -4.424109, de_p = 0.5873413, 
+                             sc_statistic = 0.7802222, sc_p = 9.999e-05))
+    } else if (exp == 2009) {
+      res <- rbind(res, list(SOA = 650, de_statistic = -0.001725521, de_p = 0.8593141, 
+                             sc_statistic = 0.6423, sc_p = 0.01049895))
+    }
+    return(res)
+  }
   ## Machado_et_al_2007
   if (exp == 2007) {
     # in the paper they refer to both 352 and 353 as the SOA = 350ms condition,

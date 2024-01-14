@@ -135,6 +135,7 @@ init_analysis <- function(type) {
 #' for OAVONA - the p-value and F-values according to the test
 run_all_analyses <- function(conf, analysis_fs, data, exp_name) {
   set.seed(conf@seed)
+  print(exp_name)
   signcon_res <- test_sign_consistency(data,'idv', c('dv','iv2'), 'iv',
                                        null_dist_samples = conf@n_samp,
                                        perm_repetitions = conf@n_perm,
