@@ -116,6 +116,9 @@ library(signcon)
   
 source('datasets_analysis\\utils.R')
 source('datasets_analysis\\definitions.R')
+
+# extract the datasets results from the zipped results file
+unzip('results\\results.zip', exdir = 'results\\')
 ```
 
 ```{r run-analyses, include=FALSE}
