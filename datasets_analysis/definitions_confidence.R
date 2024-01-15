@@ -33,11 +33,7 @@ preprocess_dfs_cdb <- function(df, ds_name) {
 get_sum_fs_confidence <- function(analysis_conf, experiments) {
   map_f_to_exp <- function(exp_name) {
     summary_f <- function(mat) {
-      # if the data is not arranged as a matrix, rearrange and apply summary f
-      if(is.null(dimnames(mat))) {
-        return(analysis_conf@summary_f(t(mat)[,'dv']))
-      }
-      return (analysis_conf@summary_f(mat[,'dv']))
+      return (analysis_conf@summary_f(mat$dv))
     }
     test_f <- function(mat) {
       mat <- as.data.frame(mat)

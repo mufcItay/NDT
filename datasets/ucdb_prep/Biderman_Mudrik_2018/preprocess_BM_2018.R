@@ -110,7 +110,7 @@ getBadTarAcc <- function(data, lowerLim = 0.7) {
 }
 getTibble <- function(exp, isPostTest = F) {
   # get the directory containing the files
-  prefix <- 'data\\'
+  prefix <- paste0('data', .Platform$file.sep)
   # assign different path and column names according to PT/Main exp data type we are reading
   if(isPostTest) {
     file_prefix = 'PostTest_'

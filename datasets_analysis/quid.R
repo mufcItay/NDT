@@ -1,10 +1,13 @@
 library(BayesFactor)
 library(MCMCpack)
-source('datasets_analysis\\definitions.R')
+source(paste('datasets_analysis', 'definitions.R',
+             sep = .Platform$file.sep))
+
 # source quid function (Rouder & Haaf, 2021; 
 # Are There Reliable Qualitative Individual Difference in Cognition?)
 # downloaded from https://bit.ly/2ZqGOik:
-source("datasets_analysis\\quid_imp.R")
+source(paste('datasets_analysis', 'quid_imp.R',
+              sep = .Platform$file.sep))
 
 #' run_quid
 #' The function runs the QUID solution on the given dataset.

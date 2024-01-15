@@ -1,10 +1,16 @@
 library(dplyr)
 library(tidyr)
 library(signcon)
-source('datasets_analysis\\definitions.R')
-source('datasets_analysis\\quid.R')
-source('datasets_analysis\\pbt.R')
-source('datasets_analysis\\oanova_test.R')
+source(paste('datasets_analysis', 'definitions.R',
+             sep = .Platform$file.sep))
+source(paste('datasets_analysis', 'quid.R',
+             sep = .Platform$file.sep))
+source(paste('datasets_analysis', 'pbt.R',
+             sep = .Platform$file.sep))
+source(paste('datasets_analysis', 'oanova_test.R',
+             sep = .Platform$file.sep))
+source(paste('datasets_analysis', 'gnt.R',
+             sep = .Platform$file.sep))
 
 #' get_input_df
 #' The function reads all datasets according to the 'analysis_conf' parameter to generate

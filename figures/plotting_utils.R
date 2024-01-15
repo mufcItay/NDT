@@ -8,7 +8,6 @@ plots_fld <- paste(figures_fld, 'plots', sep = .Platform$file.sep)
 if(!dir.exists(plots_fld)) {
   dir.create(plots_fld)
 }
-source(paste(apdx_fld, 'generate_dataset.R', sep = .Platform$file.sep))
 source(paste(analysis_fld, 'definitions.R', sep = .Platform$file.sep))
 
 
@@ -58,7 +57,6 @@ add_x_separators <- function(plt, x_seps, x_lim, angle = 45, length = .1, linewi
   ## create segment locations list
   segments <- list(x = x_seps - add_x, xend = x_seps + add_x, 
                    y = rep(1 - add_y, length(x_seps)), yend = rep(1 + add_y, length(x_seps)))
-  browser()
   ## return the resulting plot
   plt + 
     guides(x = guide_axis_truncated(
@@ -146,6 +144,17 @@ dists <- list(
     ddist_params = list(shape1=2, shape2=2),
     labels = list(params=c(0.5, 0.4))
   ),
+  wald = list(
+    name = "wald",
+    name_pos = c(0.5, 0.1),
+    plot_type = "line",
+    # The values of the x-axis.
+    x = seq(200, 900, 1),
+    top_space = .35,
+    ddist = extraDistr::dwald,
+    ddist_params = list(mu=450, lambda=101250),
+    labels = list(mean = c(0.5, .8), right_sd = c(0.80, 0.5), left_sd = c(0.20, 0.5))
+  ),
   gamma = list(
     name = "gamma",
     name_pos = c(0.3, 0.1),
@@ -181,7 +190,7 @@ dists <- list(
     name = "uniform",
     name_pos = c(0.5, 0.1),
     plot_type = "line",
-    x = seq(0, 1, 0.001),
+    x = seq(0, 1, 0.01),
     top_space = 0.6,
     ddist = dunif,
     ddist_params = list(min=0.15, max=0.85),
