@@ -427,6 +427,9 @@ Experimental demonstrations of unconscious processing have been reported for nea
 ## Data and code availability
   All data, and analysis code are available at [https://github.com/mufcItay/NDT](https://github.com/mufcItay/NDT), using `r cite_r(file = "r-references.bib")`.
 
+## Acknowledgements
+  We thank all researchers who shared their data with us: Doby Rahnev, Lucas Battich, Kirsten C. S. Adam, Natalie Biderman, Nathan Faivre, Sung-En Chien, Lina Skora, Fenja Mareike Benthien, Iris Zerweck, Mikko Hurme, Timo Stein, Liana Machado, and the Open Science Collaboration. Furthermore, we thank David Shanks for his feedback on an early version of this work.
+  
 \newpage
 
 # References
