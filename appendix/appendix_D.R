@@ -1,14 +1,14 @@
 library(dplyr)
 library(tidyr)
 
-## APPENDIX B
+## APPENDIX D
 
 # source the utilities script
 apdx_fld <- 'appendix'
 source(paste(apdx_fld, 'appendix_utils.R', sep = .Platform$file.sep))
 
 #define alpha
-apndxB_alpha <- 0.05
+apndxD_alpha <- 0.05
 
 ## define the common simulation parameters
 results_cols <- c('QUID', 'OANOVA')
@@ -23,18 +23,18 @@ mu <- 0
 # defines the number of simulations
 n_iterations <- 250
 # calculate expected CI for p=.05
-random_binom_CI_alpha <- qbinom(c(apndxB_alpha/2,1-apndxB_alpha/2), 
-                                n_iterations, apndxB_alpha)
+random_binom_CI_alpha <- qbinom(c(apndxD_alpha/2,1-apndxD_alpha/2), 
+                                n_iterations, apndxD_alpha)
 ## define the specific simulation parameters
 # FAs simulation
 N_p_FAs <- 100
 sigma_b_FAs = 0
-apndxB_conf_FAs <- initialize_simulation(N_p_FAs, N_t, sigma_b_FAs, sigma_w, mu, 
+apndxD_conf_FAs <- initialize_simulation(N_p_FAs, N_t, sigma_b_FAs, sigma_w, mu, 
                                          n_iterations, results_cols)
 # Sensitivity simulation
 N_p_sensitivity <- 30
 sigma_b_sensitivity = 15
-apndxB_conf_sensitivity <- initialize_simulation(N_p_sensitivity, N_t, 
+apndxD_conf_sensitivity <- initialize_simulation(N_p_sensitivity, N_t, 
                                                  sigma_b_sensitivity, sigma_w, mu, 
                                                  n_iterations, results_cols)
 
@@ -58,17 +58,17 @@ variability_analysis <- function(conf, params, df, seed) {
 }
 
 # run both simulations
-run_appendixB <- function(conf_FAs, conf_sensitivity) {
+run_appendixD <- function(conf_FAs, conf_sensitivity) {
   results_df_FAs <- run_simulation(conf_FAs, variability_analysis)
   results_df_sensitivity <- run_simulation(conf_sensitivity, variability_analysis)
   # aggregate simulations results to a single data frame
   results_df <- rbind(results_df_FAs, results_df_sensitivity)
   # save the results to file
-  save_results(results_df, 'Appendix_B_QUID_OANOVA')
+  save_results(results_df, 'Appendix_D_QUID_OANOVA')
   return(results_df)
 }
 
-analyze_appendix_B <- function(results_df, alpha = .05, bf_criteria = 3) {
+analyze_appendix_D <- function(results_df, alpha = .05, bf_criteria = 3) {
   # analyze results - we use the bf_criteria to categorize iterations with
   # moderate evidence for and against H0 (global null)
   bf_criteria_high <- bf_criteria

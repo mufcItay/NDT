@@ -4,7 +4,7 @@ library(stringr)
 library(tidyr)
 library(signcon)
 
-## APPENDIX F
+## APPENDIX H
 
 # source the utilities script
 apdx_fld <- 'appendix'
@@ -24,17 +24,17 @@ summary_uc_dfs <- uc_dfs %>%
 ## define the common simulation parameters
 results_cols <- c('SC_p', 'SC_stat')
 # set power analysis parameter combinations
-apndx_F_percentiles <- c(.25,.5,.75)
-N_p <- as.numeric(quantile(summary_uc_dfs$Np, apndx_F_percentiles))
-N_t <- round(as.numeric(quantile(summary_uc_dfs$Nt, apndx_F_percentiles)))
+apndx_H_percentiles <- c(.25,.5,.75)
+N_p <- as.numeric(quantile(summary_uc_dfs$Np, apndx_H_percentiles))
+N_t <- round(as.numeric(quantile(summary_uc_dfs$Nt, apndx_H_percentiles)))
 sigma_b = seq(1,2, by = .5)
 sigma_w <- 10
 mu = c(0)
 # defines the number of simulations
-apndx_f_n_iterations <- 250
+apndx_H_n_iterations <- 250
 # note that we feed the initialization function with N_t /2 because it expects
 # the number of trials per condition (we use two conditions)
-apndx_f_conf <- initialize_simulation(N_p, N_t/2, sigma_b, sigma_w, mu, apndx_f_n_iterations, 
+apndx_H_conf <- initialize_simulation(N_p, N_t/2, sigma_b, sigma_w, mu, apndx_H_n_iterations, 
                               results_cols = results_cols)
 # define the power analysis function
 power_analysis <- function(conf, params, df, seed) {
@@ -45,7 +45,7 @@ power_analysis <- function(conf, params, df, seed) {
 }
 
 # run both simulations
-run_appendixF <- function(conf) {
+run_appendixH <- function(conf) {
   # get the power analysis results
   results_df <- run_simulation(conf, power_analysis)
   
@@ -61,13 +61,13 @@ run_appendixF <- function(conf) {
          summarise_all(mean) %>%
     gather(Test, Power, SC)
   # save the summary of the results to file
-  save_results(results_summary, 'Appendix_F')
+  save_results(results_summary, 'Appendix_H')
   return(results_summary)
 }
 
-save_plot_appendixF <- function(results_summary) {
+save_plot_appendixH <- function(results_summary) {
   # plot the results
-  plt_appendix_F <- results_summary %>%
+  plt_appendix_H <- results_summary %>%
     mutate(Power = round(100 * Power),
            Test = factor(Test),
            mu = factor(ifelse(mu == 0, 'Non-directional differences','Directional effect'), 
@@ -98,8 +98,8 @@ save_plot_appendixF <- function(results_summary) {
     guides(fill = guide_colourbar(barwidth = 20,
                                   title="Power (%)"))
   # save the plot
-  save_plot(plt_appendix_F, fn = 'Appendix_F')
-  return(plt_appendix_F)
+  save_plot(plt_appendix_H, fn = 'Appendix_H')
+  return(plt_appendix_H)
 }
 
 

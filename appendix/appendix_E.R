@@ -4,7 +4,7 @@ library(stringr)
 library(tidyr)
 library(signcon)
 
-## APPENDIX C
+## APPENDIX E
 
 # source the utilities script
 apdx_fld <- 'appendix'
@@ -22,7 +22,7 @@ mu = c(0, 1)
 n_iterations <- 10^3
 # note that we feed the initialization function with N_t /2 because it expects
 # the number of trials per condition (we use two conditions)
-apndx_c_conf <- initialize_simulation(N_p, N_t/2, sigma_b, sigma_w, mu, n_iterations, 
+apndx_e_conf <- initialize_simulation(N_p, N_t/2, sigma_b, sigma_w, mu, n_iterations, 
                                       results_cols = results_cols)
 
 # define the power analysis function
@@ -36,7 +36,7 @@ power_analysis <- function(conf, params, df, seed) {
 }
 
 # run both simulations
-run_appendixC <- function(conf) {
+run_appendixE <- function(conf) {
   # get the power analysis results
   results_df <- run_simulation(conf, power_analysis)
   
@@ -54,12 +54,12 @@ run_appendixC <- function(conf) {
     summarise_all(mean) %>%
     gather(Test, Power, SC:GNT)
   # save the summary of the results to file
-  save_results(results_summary, 'Appendix_C')
+  save_results(results_summary, 'Appendix_E')
   return(results_summary)
 }
 
 
-save_plot_appendixC <- function(results_summary) {
+save_plot_appendixE <- function(results_summary) {
   # process summary table for plot
   res_per_test_df <- results_summary %>%
     mutate(Power = round(100 * Power),
@@ -70,7 +70,7 @@ save_plot_appendixC <- function(results_summary) {
            N_t = factor(N_t))
   
   # plot the results
-  plt_appendix_C <- res_per_test_df %>%
+  plt_appendix_E <- res_per_test_df %>%
     ggplot(aes(fill=Power, 
                x = N_p, y = N_t)) +
     geom_tile(colour = 'black', linewidth = .5) +
@@ -95,7 +95,7 @@ save_plot_appendixC <- function(results_summary) {
     guides(fill = guide_colourbar(barwidth = 20,
                                   title="Power (%)"))
   # save the plot
-  save_plot(plt_appendix_C, fn = 'Appendix_C')
+  save_plot(plt_appendix_E, fn = 'Appendix_E')
   
   ## create a power difference plot
   diffs_df <- res_per_test_df %>% 
@@ -103,7 +103,7 @@ save_plot_appendixC <- function(results_summary) {
     summarise(Power = -diff(Power))
   extreme_power_diff <- max(abs(diffs_df$Power))
 
-  plt_appendix_C_diffrences <- diffs_df %>%
+  plt_appendix_E_diffrences <- diffs_df %>%
     ggplot(aes(fill=Power, 
                x = N_p, y = N_t)) +
     geom_tile(colour = 'black', linewidth = .5) +
@@ -130,9 +130,9 @@ save_plot_appendixC <- function(results_summary) {
     guides(fill = guide_colourbar(barwidth = 20,
                                   title="SC - GNT (%)"))
   # save the plot
-  save_plot(plt_appendix_C_diffrences, fn = 'Appendix_C_Differences')
-  return(list(all_tests_plot = plt_appendix_C, 
-              diffs_plot = plt_appendix_C_diffrences))
+  save_plot(plt_appendix_E_diffrences, fn = 'Appendix_E_Differences')
+  return(list(all_tests_plot = plt_appendix_E, 
+              diffs_plot = plt_appendix_E_diffrences))
 }
 
 
