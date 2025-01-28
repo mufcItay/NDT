@@ -11,7 +11,7 @@ apdx_fld <- 'appendix'
 source(paste(apdx_fld, 'appendix_utils.R', sep = .Platform$file.sep))
 
 ## define the common simulation parameters
-results_cols <- c('SC_p', 'SC_statistic', 'GNT_p', 'GNT_ci_low', 'GNT_ci_high')
+results_cols <- c('SC_p', 'SC_statistic', 'ABS_ES_p', 'ABS_ES_statistic', 'GNT_p', 'GNT_ci_low', 'GNT_ci_high')
 # set power analysis parameter combinations
 N_p <- c(10, 30, 50) # the number of participants
 N_t <- c(50, 100, 500) # the number of experimental trials
@@ -28,10 +28,12 @@ apndx_e_conf <- initialize_simulation(N_p, N_t/2, sigma_b, sigma_w, mu, n_iterat
 # define the power analysis function
 power_analysis <- function(conf, params, df, seed) {
   # run the sign-consistency and GNT tests
+  res_absolute_es <- test_absolute_es(df, idv = 'idv', iv = 'iv', dv = 'dv')
   res_sc <- test_sign_consistency(df, idv = 'idv', iv = 'iv', dv = 'dv', perm_repetitions = 100)
   res_gnt <- run_gnt(df)
   # return the statistics of interest to store in the results data frame
   return(c(res_sc[c('p', 'statistic')],
+           res_absolute_es[c('p', 'statistic')],
            res_gnt[c('p', 'ci_low', 'ci_high')]))
 }
 
@@ -48,6 +50,7 @@ run_appendixE <- function(conf) {
   results_summary <- results_df %>%
     mutate(
       SC = SC_p <= alpha,
+      ABSES = ABS_ES_p <= alpha,
       GNT = GNT_p <= alpha,
       N_t = N_t *2) %>% # switch from trials per condition to total #trials
     group_by(mu, N_p, N_t) %>%
@@ -96,43 +99,6 @@ save_plot_appendixE <- function(results_summary) {
                                   title="Power (%)"))
   # save the plot
   save_plot(plt_appendix_E, fn = 'Appendix_E')
-  
-  ## create a power difference plot
-  diffs_df <- res_per_test_df %>% 
-    group_by(N_t, N_p, mu) %>% 
-    summarise(Power = -diff(Power))
-  extreme_power_diff <- max(abs(diffs_df$Power))
-
-  plt_appendix_E_diffrences <- diffs_df %>%
-    ggplot(aes(fill=Power, 
-               x = N_p, y = N_t)) +
-    geom_tile(colour = 'black', linewidth = .5) +
-    geom_text(aes(label = as.character(Power)),
-              size = 7, color = 'black') +
-    theme_minimal() + 
-    xlab(expression(N[p])) +
-    ylab(expression(N[t])) + 
-    scale_fill_gradientn(colors=c("brown2", 'white', 'royalblue2'),
-                         guide = 'colorbar',
-                         breaks=c(-extreme_power_diff, 0, extreme_power_diff),
-                         limits=c(-extreme_power_diff, extreme_power_diff)) +
-    facet_grid(vars(mu)) +
-    theme(strip.background = element_rect(fill = "white"),
-          strip.text = element_text(color = 'black', size = 26),
-          axis.title = element_text(size = 26),
-          axis.text = element_text(size = 22),
-          panel.grid = element_blank(),
-          legend.title=element_text(size=26),
-          legend.text = element_text(size=22),
-          legend.position = 'bottom',
-          strip.placement = "outside",
-          panel.spacing=unit(.5, "lines")) +
-    guides(fill = guide_colourbar(barwidth = 20,
-                                  title="SC - GNT (%)"))
-  # save the plot
-  save_plot(plt_appendix_E_diffrences, fn = 'Appendix_E_Differences')
-  return(list(all_tests_plot = plt_appendix_E, 
-              diffs_plot = plt_appendix_E_diffrences))
 }
 
 

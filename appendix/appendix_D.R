@@ -3,6 +3,25 @@ library(tidyr)
 
 ## APPENDIX D
 
+# go over empirical datasets and look for min-max variability
+
+datasets_fld <- 'datasets//ucdb'
+dataset_fns <- list.files(datasets_fld, '.csv', full.names = TRUE)
+rt_dataset_names <- c('Biderman', 'Chien', 'Faivre', 'Zerweck', 'Hurme')
+rt_fns <- dataset_fns[sapply(dataset_fns, function (fn) 
+  any(sapply(rt_dataset_names, function (name) grepl(name, fn))))]
+rt_datasets_df <- do.call(rbind, lapply(rt_fns, function(fn) read.csv(fn) %>% 
+                           dplyr::select(exp, idv, iv, dv)))
+variability_ratios <- rt_datasets_df %>%
+  group_by(exp, idv, iv) %>%
+  summarise(sd_dv = sd(dv)) %>%
+  group_by(exp,idv) %>%
+  summarise(msd_dv = mean(sd_dv, na.rm = TRUE)) %>%
+  group_by(exp) %>%
+  summarise(min_sd = min(msd_dv), 
+            max_sd = max(msd_dv), 
+            min_max_ratio = max_sd / min_sd) %>% 
+  dplyr::pull(min_max_ratio)
 # source the utilities script
 apdx_fld <- 'appendix'
 source(paste(apdx_fld, 'appendix_utils.R', sep = .Platform$file.sep))
@@ -16,24 +35,24 @@ results_cols <- c('QUID', 'OANOVA')
 N_t <- 100
 # we assume that the equal variance condition sigma_w is lower than the sigma_w
 # used in the unequal variability condition
-sigma_w_equal = 1
-sigma_w_unequal = 1000
+sigma_w_equal = 10
+sigma_w_unequal = 50
 sigma_w <- c(sigma_w_equal, sigma_w_unequal)
 mu <- 0
 # defines the number of simulations
-n_iterations <- 250
+n_iterations <- 500
 # calculate expected CI for p=.05
 random_binom_CI_alpha <- qbinom(c(apndxD_alpha/2,1-apndxD_alpha/2), 
-                                n_iterations, apndxD_alpha)
+                                n_iterations, apndxD_alpha) / n_iterations
 ## define the specific simulation parameters
 # FAs simulation
-N_p_FAs <- 100
+N_p_FAs <- 20
 sigma_b_FAs = 0
 apndxD_conf_FAs <- initialize_simulation(N_p_FAs, N_t, sigma_b_FAs, sigma_w, mu, 
                                          n_iterations, results_cols)
 # Sensitivity simulation
-N_p_sensitivity <- 30
-sigma_b_sensitivity = 15
+N_p_sensitivity <- 20
+sigma_b_sensitivity = 2
 apndxD_conf_sensitivity <- initialize_simulation(N_p_sensitivity, N_t, 
                                                  sigma_b_sensitivity, sigma_w, mu, 
                                                  n_iterations, results_cols)

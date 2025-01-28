@@ -259,6 +259,15 @@ wald_sc_nde_stat <- wald_nde_sc_res$statistic
 wald_sc_sn_p <- wald_sn_sc_res$p
 wald_sc_sn_stat <- wald_sn_sc_res$statistic
 
+# absolute effect size test
+wald_nde_abs_es_res <- test_absolute_es(wald_nde_data, idv = 'idv', iv = 'iv', dv = 'dv')
+wald_sn_abs_es_res <- test_absolute_es(wald_sn_data, idv = 'idv', iv = 'iv', dv = 'dv')
+wald_abs_es_nde_p <- wald_nde_abs_es_res$p
+wald_abs_es_nde_stat <- wald_nde_abs_es_res$statistic
+wald_abs_es_sn_p <- wald_sn_abs_es_res$p
+wald_abs_es_sn_stat <- wald_sn_abs_es_res$statistic
+
+
 ## plot Kruschke style plots for the figure
 nde_b <- dists$normal
 nde_w <- dists$wald

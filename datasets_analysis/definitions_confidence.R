@@ -35,13 +35,16 @@ get_sum_fs_confidence <- function(analysis_conf, experiments) {
     summary_f <- function(mat) {
       return (analysis_conf@summary_f(mat$dv))
     }
+    summary_f_abs_es <- function(mat_cnd1, mat_cnd2) {
+      return(lsr::cohensD(mat_cnd1[,'dv'], mat_cnd2[,'dv']))
+    }
     test_f <- function(mat) {
       mat <- as.data.frame(mat)
       conds <- sort(unique(mat$iv))
       return(wilcox.test(mat[mat$iv==conds[1],]$dv, 
                     mat[mat$iv==conds[2],]$dv)$p.value)
     }
-    return(list(summary = summary_f, test = test_f))
+    return(list(summary = summary_f, test = test_f, summary_abs_es = summary_f_abs_es))
   }
   df_to_f <- lapply(experiments, map_f_to_exp)
   names(df_to_f) <- experiments

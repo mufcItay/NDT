@@ -64,6 +64,19 @@ get_sum_fs_UC <- function(analysis_conf, experiments) {
                        ifelse(cnt == len, 1- 1 / (2*len), cnt / len))
         return (qnorm(rate))
       }
+      summary_f_abs_es <- function(mat_cnd1, mat_cnd2) {
+        cnt_cnd1 <- sum(mat_cnd1[,'dv'])
+        cnt_cnd2 <- sum(mat_cnd2[,'dv'])
+        len_cnd1 <- length(mat_cnd1[,'dv']) 
+        len_cnd2 <- length(mat_cnd2[,'dv']) 
+        rate_cnd1 <- ifelse(cnt_cnd1 == 0, 1 / (2*len_cnd1), 
+                            ifelse(cnt_cnd1 == len_cnd1, 1- 1 / (2*len_cnd1), cnt_cnd1 / len_cnd1))
+        rate_cnd2 <- ifelse(cnt_cnd2 == 0, 1 / (2*len_cnd2), 
+                            ifelse(cnt_cnd2 == len_cnd2, 1- 1 / (2*len_cnd2), cnt_cnd2 / len_cnd2))
+        res_cnd1 <- qnorm(rate_cnd1) 
+        res_cnd2 <- qnorm(rate_cnd2) 
+        return (res_cnd1 - res_cnd2)
+      }
       
       test_f <- function(mat) {
         obs_d <- get_participant_SDT_d(mat)
@@ -73,6 +86,11 @@ get_sum_fs_UC <- function(analysis_conf, experiments) {
       svp_args <- list(iv = 'iv2', dv = 'dv')
       summary_f <- function(mat) {
         return (get_participant_SDT_d(mat, svp_args))
+      }
+      summary_f_abs_es <- function(mat_cnd1, mat_cnd2) {
+        res <-  get_participant_SDT_d(mat_cnd1, svp_args) - 
+          get_participant_SDT_d(mat_cnd2, svp_args)
+        return(res)
       }
       test_f <- function(mat) {
         conds <- sort(unique(mat$iv))
@@ -88,6 +106,16 @@ get_sum_fs_UC <- function(analysis_conf, experiments) {
           analysis_conf@summary_f(mat[mat[,'iv2'] == 1, 'dv'])
         return(res) 
       }
+      summary_f_abs_es <- function(mat_cnd1, mat_cnd2) {
+        if(is.null(nrow(mat_cnd1))) {
+          return (mat[names(mat_cnd1) == 'dv'])
+        }
+        res1 <- lsr::cohensD(mat_cnd1[mat_cnd1[,'iv2'] == 0, 'dv'], mat_cnd1[mat_cnd1[,'iv2'] == 1, 'dv'])
+        res2 <- lsr::cohensD(mat_cnd2[mat_cnd2[,'iv2'] == 0, 'dv'], mat_cnd2[mat_cnd2[,'iv2'] == 1, 'dv'])
+        res <-  res1 - res2
+        return(res)
+      }
+      
       test_f <- function(mat) {
         args <- bh_args
         args$iv = 'iv2'
@@ -104,13 +132,19 @@ get_sum_fs_UC <- function(analysis_conf, experiments) {
         } 
         return(analysis_conf@summary_f(mat[,'dv']))
       }
+      summary_f_abs_es <- function(mat_cnd1, mat_cnd2) {
+        if(is.null(nrow(mat_cnd1))) {
+          return (mat[names(mat_cnd1) == 'dv'])
+        } 
+        return(lsr::cohensD(mat_cnd1[,'dv'], mat_cnd2[,'dv']))
+      }
       test_f <- function(mat) {
         mat <- as.data.frame(mat)
         conds <- sort(unique(mat$iv))
         return(t.test(mat[mat$iv==conds[1],]$dv,
                            mat[mat$iv==conds[2],]$dv)$p.value)}
     }
-    return(list(summary = summary_f, test = test_f))
+    return(list(summary = summary_f, test = test_f, summary_abs_es = summary_f_abs_es))
   }
   df_to_f <- lapply(experiments, map_f_to_exp)
   names(df_to_f) <- experiments

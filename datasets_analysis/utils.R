@@ -178,7 +178,7 @@ exclude_participants <- function(data, condition_vars, min_trials = 5) {
     filter (n < min_trials) %>%
     dplyr::pull(unique_id)
 
-  # exclude participants with zero variance in all levels of the independent
+  # exclude participants with zero variance in for all levels of the independent
   # variable
   exc_zero_var <- data_exc %>%
     group_by_at(.vars = non_iv_factor_vars) %>% 

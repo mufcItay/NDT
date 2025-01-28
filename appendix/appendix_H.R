@@ -22,7 +22,12 @@ summary_uc_dfs <- uc_dfs %>%
 
 
 ## define the common simulation parameters
-results_cols <- c('SC_p', 'SC_stat')
+run_sc_test <- TRUE
+if (run_sc_test) {
+  results_cols <- c('SC_p', 'SC_stat')
+} else {
+  results_cols <- c('ABSES_p', 'ABSES_statistic')
+}
 # set power analysis parameter combinations
 apndx_H_percentiles <- c(.25,.5,.75)
 N_p <- as.numeric(quantile(summary_uc_dfs$Np, apndx_H_percentiles))
@@ -36,12 +41,28 @@ apndx_H_n_iterations <- 250
 # the number of trials per condition (we use two conditions)
 apndx_H_conf <- initialize_simulation(N_p, N_t/2, sigma_b, sigma_w, mu, apndx_H_n_iterations, 
                               results_cols = results_cols)
+apndx_H_conf$is_sc_test <- run_sc_test
+
 # define the power analysis function
-power_analysis <- function(conf, params, df, seed) {
-  # run the sign-consistency and PBT tests
+power_analysis_sc <- function(conf, params, df, seed) {
+  # run the sign-consistency test
   res_sc <- test_sign_consistency(df, idv = 'idv', iv = 'iv', dv = 'dv', perm_repetitions = 100)
+  res <- c(res_sc[c('p', 'statistic')])
   # return the statistics of interest to store in the results data frame 
-  return(c(res_sc[c('p', 'statistic')]))
+  return(res)
+}
+
+power_analysis_abses <- function(conf, params, df, seed) {
+  # run the absolute effect size test
+  res_absolute_es <- test_absolute_es(df, idv = 'idv', iv = 'iv', dv = 'dv')
+  res <- c(res_absolute_es[c('p', 'statistic')])
+  # return the statistics of interest to store in the results data frame 
+  return(res)
+}
+if (run_sc_test) {
+  power_analysis <- power_analysis_sc
+} else {
+  power_analysis <- power_analysis_abses
 }
 
 # run both simulations
@@ -53,19 +74,23 @@ run_appendixH <- function(conf) {
   # count significant sign-consistency and HDI excludes zero (for PBT)
   alpha <- .05
   # data frame structure:
-  # (condition) X (sign-consistency significance,  PBT's HDI exceeds zero)
+  # (condition) X (test's significance)
+  test_var <- ifelse(conf$is_sc_test, 'SC', 'ABSES')
+  test_p_var <- paste0(test_var, '_p')
   results_summary <- results_df %>%
-    mutate(SC = SC_p <= alpha,
+    mutate({{test_var}} := (!!sym(test_p_var) <= alpha),
            N_t = N_t *2, sds_ratio = sigma_b/sigma_w) %>%
          group_by(mu, N_p, N_t, sds_ratio) %>%
          summarise_all(mean) %>%
-    gather(Test, Power, SC)
+    gather(Test, Power, as.name(test_var))
+
   # save the summary of the results to file
-  save_results(results_summary, 'Appendix_H')
+  save_results(results_summary, paste('Appendix_H_', test_var))
   return(results_summary)
 }
 
 save_plot_appendixH <- function(results_summary) {
+  test_name <- results_summary %>% dplyr::pull(Test) %>% first()
   # plot the results
   plt_appendix_H <- results_summary %>%
     mutate(Power = round(100 * Power),
@@ -78,17 +103,17 @@ save_plot_appendixH <- function(results_summary) {
                x = N_p, y = N_t)) +
     geom_tile(colour = 'black', linewidth = .5) +
     geom_text(aes(label = as.character(Power)),
-              size = 7, color = 'black') +
+              size = 11, color = 'black') +
     theme_minimal() + 
     xlab(expression(N[p])) +
     ylab(expression(N[t])) + 
     scale_fill_gradientn(colors=c("seashell1", 'lightblue', 'royalblue1' ,'royalblue4'),
                          guide = 'colorbar') +
-    facet_grid(vars(sds_ratio), vars(mu)) +
+    facet_grid(vars(sds_ratio), vars(Test)) +
     theme(strip.background = element_rect(fill = "white"),
           strip.text = element_text(color = 'black', size = 26),
-          axis.title = element_text(size = 26),
-          axis.text = element_text(size = 22),
+          axis.title = element_text(size = 30),
+          axis.text = element_text(size = 28),
           panel.grid = element_blank(),
           legend.title=element_text(size=26),
           legend.text = element_text(size=22),
@@ -98,7 +123,8 @@ save_plot_appendixH <- function(results_summary) {
     guides(fill = guide_colourbar(barwidth = 20,
                                   title="Power (%)"))
   # save the plot
-  save_plot(plt_appendix_H, fn = 'Appendix_H')
+  plt_name <- paste("Appendix_H", test_name, sep = '_')
+  save_plot(plt_appendix_H, fn = plt_name, ext = '.svg')
   return(plt_appendix_H)
 }
 

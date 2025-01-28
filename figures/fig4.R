@@ -10,11 +10,17 @@ library(ggh4x)
 figures_fld <- 'figures'
 source(paste(figures_fld, 'plotting_utils.R', sep = .Platform$file.sep))
 # define constants for later processing and plotting
-field_to_color_pal <- c("Metacognitive Sensitivity" = "#B25E9D", 
-           "Confidence" = "#3ECFC9", 
-           "Cognitive Psychology" = "#F4B26A", 
-           "Unconscious Processing" = "#EB5F4A", 
+field_to_color_pal <- c("Metacognitive Sensitivity" = "#117733", 
+           "Confidence" = "#332288", 
+           "Cognitive Psychology" = "#DDCC77", 
+           "Unconscious Processing" = "#CC6677", 
            "Null" = '#AAAAAA')
+field_to_shape <- c("Metacognitive Sensitivity" = 22, 
+                        "Confidence" = 23, 
+                        "Cognitive Psychology" = 24, 
+                        "Unconscious Processing" = 21, 
+                        "Null" = 7)
+
 # transform values to get proper labels for the p-values
 scientific_10 <- function(x) {
   parse(text=gsub("e", " %*% 10^", scales::scientific_format(digits = 2)(x)))
@@ -23,20 +29,22 @@ scientific_10 <- function(x) {
 # set functions and variable names for each test:
 # we have different 'significance' rules, and result column names
 # for each test, so we store a mapping between test names and respective functions
-test_types <- c("Sign-Consistency", "QUID", "OANOVA", "GNT")
+test_types <- c("Sign-Consistency", "QUID", "OANOVA", "GNT", "Absolute effect size")
 # mapps between results column name to the test name
-test_type_to_column_name <- list("signcon.p", "quid_bf", "oanova.p", "gnt.p")
+test_type_to_column_name <- list("signcon.p", "quid_bf", "oanova.p", "gnt.p", "absolute_es.p")
+# map results to statistic of tests
+test_type_to_statistic_column_name <- list("signcon.statistic", "quid_bf", "oanova.F", "gnt.stat", "absolute_es.statistic")
 names(test_type_to_column_name) <- test_types
-# mapps between the significance function of the test and the test names
+names(test_type_to_statistic_column_name) <- test_types
 nhst_sig <- function(p, alpha = .05) p < alpha
 bf_sig <- function(bf, criterion = 3) 1/bf > criterion
-test_type_to_sig_f <- list(nhst_sig, bf_sig, nhst_sig, nhst_sig)
+test_type_to_sig_f <- list(nhst_sig, bf_sig, nhst_sig, nhst_sig, nhst_sig)
 names(test_type_to_sig_f) <- test_types
 
 ## DEFINE HELPER FUNCTIONS
 # define a function to fetch all results, and fit them into a standard dataframe
-read_res_df <- function(fns, result_col_names = c('signcon.p')) {
-  result_col_names <- c(result_col_names, 'directional_test.p', 'signcon.statistic')
+read_res_df <- function(fns, result_col_names = c('signcon.p', 'signcon.statistic')) {
+  result_col_names <- c(result_col_names, 'directional_test.p')
   all_results <- data.frame()
   # iterate over the result files (one per field) and aggregate them into a large dataframe
   for (fn in fns) {
@@ -77,7 +85,8 @@ generate_fig4 <- function(test_type, results_df, plot_null_line = FALSE, plot_ta
 }
 
 # the function generates a figure for a frequentist test, and saves it as a file
-generate_fig4_frequentist <- function(test_type, results_df, plot_null_line, plot_tag) {
+generate_fig4_frequentist <- function(test_type, results_df, plot_null_line, plot_tag, alpha = .05) {
+  print(test_type)
   # set alpha level
   alpha <- .05
   # set epsilon - the lowest p value in the plot (we truncate lower p values for presentation purposes)
@@ -99,9 +108,10 @@ generate_fig4_frequentist <- function(test_type, results_df, plot_null_line, plo
   # create the plot
   scatter_plt <- results_df %>%
     mutate(directional_test.p = eps + directional_test.p*(1-eps)) %>%
-    ggplot(aes(x=test_result,y=directional_test.p, fill = type)) +
+    ggplot(aes(x=test_result,y=directional_test.p, fill = type, shape = type)) +
     geom_vline(xintercept = alpha, color = 'black', linewidth = 1.5) +
-    geom_point(size = 4, colour = 'black', stroke = 1, shape = 21) +
+    geom_point(size = 4, colour = 'black', stroke = 1) +
+    scale_shape_manual(values = field_to_shape) +
     scale_fill_manual(values = field_to_color_pal) +
     labs(y=expression('Directional p-value ' ~(log[10])),
          x=as.expression(bquote(.(x_title_prefix)~(log[10])))) +
@@ -161,9 +171,13 @@ generate_fig4_frequentist <- function(test_type, results_df, plot_null_line, plo
 }
 
 # the function generates a figure for a BFs QUID test, and saves it as a file
-generate_fig4_BFs <- function(test_type, results_df, plot_null_line, plot_tag) {
+generate_fig4_BFs <- function(test_type, results_df, plot_null_line, plot_tag, alpha = 0.05) {
   # define the BF criterion
   bf_criterion <- 3
+  # set epsilon - the lowest p value in the plot (we truncate lower p values for presentation purposes)
+  null_dist_nsamples <- 10^4
+  eps <- 1 / (1 + null_dist_nsamples)
+  
   # manipulate BF scores, for the figure (fixing extreme
   # BFs to max_BF or max_BF^-1)
   max_BF <- 10^3
@@ -179,16 +193,18 @@ generate_fig4_BFs <- function(test_type, results_df, plot_null_line, plot_tag) {
                                   y = alpha - rep(sig_areas_y_marg, 2))
   # create the scatter plot
   scatter_plt <- results_df %>%
-    ggplot(aes(x=test_result,y=directional_test.p, fill = type)) +
+    mutate(directional_test.p = eps + directional_test.p*(1-eps)) %>%
+    ggplot(aes(x=test_result,y=directional_test.p, fill = type, shape = type)) +
     geom_vline(xintercept = c(1/bf_criterion, bf_criterion), color = 'black', linewidth = 1.5) +
-    geom_point(size = 4, colour = 'black', stroke = 1, shape = 21) +
+    geom_point(size = 4, colour = 'black', stroke = 1) +
+    scale_shape_manual(values = field_to_shape) +
     scale_fill_manual(values = field_to_color_pal) +
     labs(y=expression('Directional p-value ' ~(log[10])),
          x=as.expression(QUID~BF['01']~(log[10]))) +
     scale_y_log10(breaks = c(alpha, 1),
                   labels = c(expression(alpha), '1'),
                   limits = c(0.75 * alpha, 1)) +
-    scale_x_log10(limits = c(.01, max_BF),
+    scale_x_log10(limits = c(0.01, max_BF),
                   breaks = c(.01, 1, max_BF),
                   labels = c(math_format()(log10(.01)),
                              expression(log[10](1)),
@@ -202,7 +218,7 @@ generate_fig4_BFs <- function(test_type, results_df, plot_null_line, plot_tag) {
           legend.position = 'none') +
     coord_fixed()
   
-  # create the density plot
+  # create the density plotsig_percent_nsdir_across_types
   density_nondir <- results_df %>%
     ggplot(aes(x = test_result, fill = type, colour = type)) + 
     scale_fill_manual(values = field_to_color_pal) +
@@ -231,7 +247,7 @@ generate_fig4_BFs <- function(test_type, results_df, plot_null_line, plot_tag) {
 
 # define a function that analyzed the results and generates the respective plot
 # for each test
-analyze_test_results <- function(test_type, all_results_df, plot_null_line = TRUE, plot_tag = '') {
+analyze_test_results <- function(test_type, all_results_df, plot_null_line = TRUE, plot_tag = '', alpha = .05) {
   # get the significane test function for the specific test type
   sig_test <- test_type_to_sig_f[[test_type]]
   # filter the large results dataframe, to get only the relevant results
@@ -262,7 +278,7 @@ analyze_test_results <- function(test_type, all_results_df, plot_null_line = TRU
     summarise(N = n()) %>%
     complete(type, fill = list(N = 0))
 
-  # get the percent of significant non-directional effects in each typeuncorrected across all types
+  # get the percent of significant non-directional effects in each type uncorrected across all types
   sig_percent_nsdir_across_types <- nsdir_df %>%
     filter(type != "Unconscious Processing") %>%
     mutate(non_dir_effect = sig_test(test_result)) %>% 
@@ -291,7 +307,6 @@ analyze_test_results <- function(test_type, all_results_df, plot_null_line = TRU
     complete(non_dir_effect, fill = list(N = 0)) %>%
     group_by(type) %>%
     summarise(perc_nondir_sig = 100 * (1 - first(N) / sum(N)))
-  
   # generate a plot with both individual level results, and density plot
   plt <-generate_fig4(test_type, nsdir_df, plot_null_line, plot_tag)
   
@@ -308,11 +323,14 @@ results_fns <- list.files(results_fld, pattern = '.csv', full.names = TRUE)
 
 # get the results of all tests and fields in one dataframe
 all_results_df <- read_res_df(results_fns, result_col_names=
-                                as.character(test_type_to_column_name))
+                                c(as.character(test_type_to_column_name),
+                                               as.character(test_type_to_statistic_column_name)))
 
 # run the analysis on all tests (the results will be used in the Rmd file)
 # the output is a list with a summary of the analysis results and a plot saved to
 # the figures\plots folder
+
+all_datasets_absES <- analyze_test_results("Absolute effect size", all_results_df)
 all_datasets_signcon <- analyze_test_results('Sign-Consistency', all_results_df)
 all_datasets_GNT <- analyze_test_results('GNT', all_results_df, plot_tag = 'A')
 all_datasets_QUID <- analyze_test_results('QUID', all_results_df, plot_null_line = F, plot_tag = 'B')

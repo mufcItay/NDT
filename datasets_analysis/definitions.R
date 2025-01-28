@@ -140,11 +140,13 @@ run_all_analyses <- function(conf, analysis_fs, data, exp_name) {
                                        null_dist_samples = conf@n_samp,
                                        perm_repetitions = conf@n_perm,
                                        summary_function = analysis_fs[[exp_name]]$summary)
+  absolute_es_res <- test_absolute_es(data, idv = 'idv', iv = 'iv', dv = c('dv','iv2'), summary_function = analysis_fs[[exp_name]]$summary_abs_es)
   directional_test_res <- test_directional_effect(data,'idv', c('dv','iv2'), 'iv',
                                                   null_dist_samples = conf@n_samp, ci_reps = 10^5,
                                                   summary_function = analysis_fs[[exp_name]]$summary)
   data.frame(
     signcon = signcon_res[c('p','statistic','null_dist')],
+    absolute_es = absolute_es_res[c('p','statistic','null_dist')],
     directional_test = directional_test_res[c('statistic','p', 'ci_low', 'ci_high')],
     quid = run_quid(data)[c('quid_bf')],
     gnt = run_gnt(data, analysis_fs[[exp_name]]$test)[c('p', 'stat', 'ci_low', 'ci_high')],

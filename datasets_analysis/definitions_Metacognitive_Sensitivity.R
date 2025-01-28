@@ -61,6 +61,11 @@ get_sum_fs_AUC <- function(analysis_conf, experiments) {
     summary_f <- function(mat) {
       return (analysis_conf@summary_f(mat))
     }
+    summary_f_abs_es <- function(mat_cnd1, mat_cnd2) {
+      res <- analysis_conf@summary_f(mat_cnd1) - 
+        analysis_conf@summary_f(mat_cnd2)
+      return (res)
+    }
     test_f <- function(mat) {
       conds <- sort(unique(mat$iv))
       mat_cond_1 <- mat[mat$iv == conds[1],c('iv2','dv')]
@@ -70,7 +75,7 @@ get_sum_fs_AUC <- function(analysis_conf, experiments) {
       return(perm_test_subject(as.data.frame(mat), obs, summary_f = analysis_conf@summary_f,
                                summary_f_args = list(iv = 'iv', iv2 = 'iv2', dv = 'dv')))
     }
-    return(list(summary = summary_f, test = test_f))
+    return(list(summary = summary_f, test = test_f, summary_abs_es = summary_f_abs_es))
   }
   df_to_f <- lapply(experiments, map_f_to_exp)
   names(df_to_f) <- experiments

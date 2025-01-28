@@ -45,7 +45,12 @@ prepare_data <- function(data, ci_percentile = 5) {
   res_dir$effect_per_id$sc <- sc
   data_effects <-  res_dir$effect_per_id %>% 
     rename(effect = score)
-  
+  data_effects$low_bnd <- sapply(unique(data$idv), function(id) 
+    t.test(data[(data$idv == id) & (data$iv == unique(data$iv)[2]),]$dv, 
+           data[(data$idv == id) & (data$iv == unique(data$iv)[1]),]$dv)[['conf.int']][1])[ord_effects]
+  data_effects$high_bnd <- sapply(unique(data$idv), function(id) 
+    t.test(data[(data$idv == id) & (data$iv == unique(data$iv)[2]),]$dv, 
+           data[(data$idv == id) & (data$iv == unique(data$iv)[1]),]$dv)[['conf.int']][2])[ord_effects]
   # get the percentiles for each participant and condition
   lowbnd <- ci_percentile / 100
   lowbnd <- lowbnd / 2
@@ -80,12 +85,12 @@ generate_effects_plot <- function(data, graphics_conf) {
   plt <- ggplot(data, aes(x = effect, y = idv)) +
     xlab('Effect') +
     ylab('Subject') +
-    xlim(-50,50) +
     geom_point(size = 3) +
     geom_hline(yintercept = head(data$idv,-1) + graphics_conf$margin_y_subj, 
                linewidth = graphics_conf$size_seg/2, linetype='dotted', 
                col = graphics_conf$color_spreading_lines) +
     geom_vline(xintercept = 0,  linewidth = graphics_conf$vline_size) +
+    geom_errorbarh(aes(xmax = high_bnd, xmin = low_bnd)) + 
     theme_classic() +
     theme(legend.position = 'none',
           axis.text = element_text(size = graphics_conf$x_text_size),
@@ -96,7 +101,9 @@ generate_effects_plot <- function(data, graphics_conf) {
           axis.title.x = element_text(size = graphics_conf$x_title_size,
                                       margin = margin(t = 15))
           ) +
-    scale_y_continuous(limits = c(1 - graphics_conf$margin_y_subj, nrow(data) + graphics_conf$margin_y_subj), breaks = c(1,seq(5, nrow(data), by = 5)))
+    scale_y_continuous(limits = c(1 - graphics_conf$margin_y_subj, nrow(data) + graphics_conf$margin_y_subj), breaks = c(1,seq(5, nrow(data), by = 5))) +
+    scale_x_continuous(limits = c(-70,70), breaks = seq(-50,50, by =25))
+  
   return (plt)
 }
 
@@ -131,7 +138,7 @@ generate_ps_plot <- function(data_ps_cong, data_ps_incong, graphics_conf) {
     geom_vline(xintercept = mean(data_ps_cong$med),  linewidth = graphics_conf$vline_size) +
     xlab('RT') +
     ylab('Subject') +
-    xlim(600, 700) +
+    xlim(600, 720) +
     theme_classic() +
     theme(legend.position = 'none',
           axis.text = element_text(size = graphics_conf$x_text_size),
@@ -141,7 +148,9 @@ generate_ps_plot <- function(data_ps_cong, data_ps_incong, graphics_conf) {
           axis.ticks.y = element_blank(),
           axis.line.y = element_blank(),
           axis.title.x = element_text(margin = margin(t = 15))) +
-    scale_y_continuous(limits = c(1 - graphics_conf$margin_y_conds, nrow(data_ps_cong) + graphics_conf$margin_y_conds), breaks = c(1,seq(5, nrow(data_ps_cong), by = 5)))
+    scale_y_continuous(limits = c(1 - graphics_conf$margin_y_conds, nrow(data_ps_cong) + graphics_conf$margin_y_conds), breaks = c(1,seq(5, nrow(data_ps_cong), by = 5))) +
+    scale_x_continuous(limits = c(600,720), breaks = seq(600,700, by =25))
+  
   return (plt)
 }
 

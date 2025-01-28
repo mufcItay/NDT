@@ -23,7 +23,7 @@ analyze_machado <- function(exp, folder_path) {
   # read the dataset
   data <- get_df(exp, folder_path)
   # the data was shared with us privately, so providing only statistics
-  if(is.na(data)) {
+  if(all(is.na(data))) {
     res <- data.frame(SOA = integer(), de_statistic = double(), de_p = double(),
                       sc_statistic = double(), sc_p = double())
     if(exp == 2007) {
@@ -63,11 +63,17 @@ analyze_machado <- function(exp, folder_path) {
       filter(SOA == 650 | SOA == 950) %>%
       dplyr::select(idv,iv,dv, exp, SOA)
   }
-  res <- get_tests_res(filtered_data, unique(filtered_data$SOA))
+  
+  summary_f_abs_es <- function(mat_cnd1, mat_cnd2) {
+    res <- lsr::cohensD(mat_cnd1, mat_cnd2)
+    return(res)
+  }
+  
+  res <- get_tests_res(filtered_data, unique(filtered_data$SOA), summary_f_abs_es)
 }
 
 
-get_tests_res <- function(data, soas, summary_f = mean) {
+get_tests_res <- function(data, soas, summary_f_es, summary_f = mean) {
   res <- data.frame(SOA = integer(), de_statistic = double(), de_p = double(),
                     sc_statistic = double(), sc_p = double())
   for (soa in soas) {
@@ -75,14 +81,20 @@ get_tests_res <- function(data, soas, summary_f = mean) {
     res_de <- 
       signcon::test_directional_effect(dat, idv = 'idv', dv = 'dv', iv = 'iv', 
                                        summary_function = summary_f)
+    res_abs_es <-
+      signcon::test_absolute_es(dat,  idv = 'idv', dv = 'dv', iv = 'iv',
+                                summary_function = summary_f_es, perm_repetitions = 100)
     res_sc <- 
       signcon::test_sign_consistency(dat,  idv = 'idv', dv = 'dv', iv = 'iv',
                                      summary_function = summary_f, perm_repetitions = 100)
+    
     res <- rbind(res, data.frame(SOA = soa, 
                                  de_statistic = res_de$statistic, 
                                  de_p = res_de$p, 
                                  sc_statistic = res_sc$statistic, 
-                                 sc_p = res_sc$p))
+                                 sc_p = res_sc$p,
+                                 abs_es_statistic = res_abs_es$statistic,
+                                 abs_es_p = res_abs_es$p))
   } 
   return(res)
 }

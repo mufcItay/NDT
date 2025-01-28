@@ -26,8 +26,12 @@ add_simulation_results <- function(emp_data) {
   n_null_samples <- 10^5
   sign_con_nde <- test_sign_consistency(nde_data, idv = 'idv', iv = 'iv', dv = 'dv', null_dist_samples = n_null_samples)
   sign_con_sn <- test_sign_consistency(sn_data, idv = 'idv', iv = 'iv', dv = 'dv', null_dist_samples = n_null_samples)
+  abs_es_nde <- test_absolute_es(nde_data, idv = 'idv', iv = 'iv', dv = 'dv', null_dist_samples = n_null_samples)
+  abs_es_sn <- test_absolute_es(sn_data, idv = 'idv', iv = 'iv', dv = 'dv', null_dist_samples = n_null_samples)
+  
   gn_df <- data.frame(exp = rep('GN', n_null_samples),
-                      signcon.null_dist = sign_con_sn$null_dist)
+                      signcon.null_dist = sign_con_sn$null_dist,
+                      absolute_es.null_dist = abs_es_sn$null_dist)
   gn_df$quid_bf <- 1/sn_bf
   gn_df$gnt.p <- sn_gnt_res$p
   gn_df$gnt.stat <- sn_gnt_res$stat
@@ -36,8 +40,11 @@ add_simulation_results <- function(emp_data) {
   gn_df$oanova.p <- sn_OANOVA_res$p
   gn_df$signcon.p <- sign_con_sn$p
   gn_df$signcon.statistic <- sign_con_sn$statistic
+  gn_df$absolute_es.p <- abs_es_sn$p
+  gn_df$absolute_es.statistic <- abs_es_sn$statistic
   nd_df <- data.frame(exp = rep('ND', n_null_samples),
-                      signcon.null_dist = sign_con_nde$null_dist)
+                      signcon.null_dist = sign_con_nde$null_dist,
+                      absolute_es.null_dist = abs_es_nde$null_dist)
   nd_df$quid_bf <- 1/nde_bf
   nd_df$gnt.p <- nde_gnt_res$p
   nd_df$gnt.stat <- nde_gnt_res$stat
@@ -46,6 +53,8 @@ add_simulation_results <- function(emp_data) {
   nd_df$oanova.p <- nde_OANOVA_res$p
   nd_df$signcon.p <- sign_con_nde$p
   nd_df$signcon.statistic <- sign_con_nde$statistic
+  nd_df$absolute_es.p <- abs_es_nde$p
+  nd_df$absolute_es.statistic <- abs_es_nde$statistic
   sim_data <- rbind(gn_df, nd_df)                      
   sim_data$is_sim <- TRUE
   sim_data$directional_test.p <- invalid_res
@@ -100,7 +109,7 @@ generate_signcon_plot <- function(data, graphics_conf, alpha = .05) {
                         quantile_fun = qf, from = 0, to = 100,quantiles = 2, 
                         quantile_lines = TRUE, calc_ecdf = TRUE, fill= graphics_conf$dist_below_color) +
     geom_segment(data = highly_sig_markers_df, aes(fill = NULL, x = x, xend = xend, y = y, yend = yend), 
-                     linewidth = graphics_conf$vline_size, color = graphics_conf$vline_color) +
+                 linewidth = graphics_conf$vline_size, color = graphics_conf$vline_color) +
     scale_x_continuous(limits=c(0,100), breaks=seq(0,100,10))+
     coord_flip() +
     ylab('Experiment') +
@@ -125,6 +134,84 @@ generate_signcon_plot <- function(data, graphics_conf, alpha = .05) {
               by = c("group" = "exp")) %>%
     mutate(fill = case_when(effect ~ graphics_conf$significant_color,
                             x < sc ~ fill,
+                            TRUE ~ graphics_conf$dist_above_color)) 
+  
+  plt_breakdown <- ggplot_gtable(plt_breakdown)
+  
+  return (plt_breakdown)
+}
+
+
+#' generate_abs_es_plot
+#' The function generates the absolute effect size test (non-directional test) results plot
+#' @param data a dataframe with the results of the abs effect size test.
+#'  The shape of the dataframe is (#Datasets) X (exp, p, stat, null_dist), 
+#' where 'exp' is the name of the effect, 'p' is the p-value according to the 
+#' test, 'stat' is the group-level absolute effect size, and
+#' 'null_dist' is the samples from the null distribution of the statistic.
+#' @param graphics_conf a list with different graphics configurations to be used by
+#' @param alpha an alpha value that determines which effects are significant
+#' @return the plot describing the results of the (non-directional) absolute effect size test
+generate_abs_es_plot <- function(data, graphics_conf, alpha = .05) {
+  n_sim <- length(unique(data[data$is_sim,]$exp))
+  data_sim_rect <- data.frame(ymin = 1, ymax = n_sim + .5,
+                              xmin = 0, xmax = 0.7)
+  data <- data %>%
+    mutate(effect = p <= alpha, exp = factor(exp), stat = stat, null = null)
+  effect_per_exp <- data %>%
+    group_by(exp) %>%
+    summarise(effect = first(effect)) %>%
+    dplyr::pull(effect)
+  exp_label_colors <- sapply(effect_per_exp, function(e) ifelse(e, graphics_conf$significant_color, 'black'))
+  exp_label_face <- sapply(effect_per_exp, function(e) ifelse(e, "bold","plain"))
+  highly_sig_markers_df <- data %>% 
+    filter(p < 10^-2) %>% 
+    group_by(exp) %>% 
+    summarise(stat = first(stat)) %>% 
+    mutate(x = stat, xend = stat, y = as.integer(exp), yend = as.integer(exp) + .5)
+  absess <- data %>% 
+    group_by(exp) %>% 
+    summarise(abs_es = unique(stat), null_dist_id = sum(null), effect = unique(effect)) %>%
+    mutate(exp = as.integer(exp))
+  qf <- function(x,probs) {
+    absess %>% filter(null_dist_id == sum(x)) %>% dplyr::pull(abs_es) %>% first()
+  }
+  plt <- ggplot(data, aes(x = null, y = exp, fill = effect)) +
+    geom_rect(data = data_sim_rect, 
+              aes(NULL, NULL , xmin = xmin, xmax = xmax, ymin = ymin, 
+                  ymax = ymax,shape = NULL),
+              fill = graphics_conf$sim_rect_color, alpha = .5) +
+    stat_density_ridges(geom = "density_ridges_gradient",alpha = 1, size=1, 
+                        vline_size = graphics_conf$vline_size, 
+                        vline_color = c(graphics_conf$vline_color), 
+                        quantile_fun = qf, n = 4096, from = 0, to = 100,quantiles = 2, 
+                        quantile_lines = TRUE, calc_ecdf = TRUE, fill= graphics_conf$dist_below_color) +
+    geom_segment(data = highly_sig_markers_df, aes(fill = NULL, x = x, xend = xend, y = y, yend = yend), 
+                 linewidth = graphics_conf$vline_size, color = graphics_conf$vline_color) +
+    scale_x_continuous(limits=c(0,0.7), breaks=seq(0,0.7,.1))+
+    coord_flip() +
+    ylab('Experiment') +
+    xlab('|Effect Size|') +
+    theme_classic() +
+    theme(legend.position = 'none',
+          plot.title = element_text(size = graphics_conf$title_size, hjust = 0,
+                                    margin=margin(0,0,30,0)),
+          axis.text = element_text(size = graphics_conf$x_text_size),
+          axis.text.x = element_text(size = graphics_conf$x_text_size, vjust = .1,
+                                     colour = exp_label_colors, face = exp_label_face,
+                                     angle = 45),
+          axis.title = element_text(size = graphics_conf$x_title_size),
+          axis.title.x = element_text(size = graphics_conf$x_title_size, vjust = -3),
+          axis.title.y = element_text(margin = margin(t = 0, r = 5, b = 0, l = 0)),
+          plot.margin = (unit(c(1, .5, 1, .5), "cm")))
+  
+  # modify the layers of the plot to add coloring by sign-consistenct
+  plt_breakdown <- ggplot_build(plt)
+  plt_breakdown$data[[2]] = plt_breakdown$data[[2]] %>%
+    left_join(., absess,
+              by = c("group" = "exp")) %>%
+    mutate(fill = case_when(effect ~ graphics_conf$significant_color,
+                            x < abs_es ~ fill,
                             TRUE ~ graphics_conf$dist_above_color)) 
   
   plt_breakdown <- ggplot_gtable(plt_breakdown)
@@ -391,21 +478,29 @@ effect_OANOVA_res <- uc_effect_results %>% filter(oanova.p != invalid_res) %>%
 effect_n_OANOVA <- nrow(effect_OANOVA_res)
 
 # Non-directional sign-consistency
-ns_nondir_res <- uc_ns_results %>% 
+ns_signcon_nondir_res <- uc_ns_results %>% 
   dplyr::select(exp, signcon.p, signcon.statistic,
                 signcon.null_dist, is_sim) %>% 
   rename(p = signcon.p, stat = signcon.statistic,
          null = signcon.null_dist)
-nondir_res_all <- uc_results %>% 
+effect_signcon_nondir_res <- uc_effect_results %>% 
   dplyr::select(exp, signcon.p, signcon.statistic, 
                 signcon.null_dist, is_sim) %>% 
   rename(p = signcon.p, stat = signcon.statistic,
          null = signcon.null_dist)
-effect_nondir_res <- uc_effect_results %>% 
-  dplyr::select(exp, signcon.p, signcon.statistic, 
-                signcon.null_dist, is_sim) %>% 
-  rename(p = signcon.p, stat = signcon.statistic,
-         null = signcon.null_dist)
+
+# Non-directional absolute effect size
+ns_abs_es_nondir_res <- uc_ns_results %>% 
+  dplyr::select(exp, absolute_es.p, absolute_es.statistic,
+                absolute_es.null_dist, is_sim) %>% 
+  rename(p = absolute_es.p, stat = absolute_es.statistic,
+         null = absolute_es.null_dist)
+effect_abs_es_nondir_res <- uc_effect_results %>% 
+  dplyr::select(exp, absolute_es.p, absolute_es.statistic,
+                absolute_es.null_dist, is_sim) %>% 
+  rename(p = absolute_es.p, stat = absolute_es.statistic,
+         null = absolute_es.null_dist)
+
 # Directional
 dir_res_all <- uc_results %>% 
   dplyr::select(exp, directional_test.p, directional_test.statistic, 
@@ -498,16 +593,18 @@ paste('N_Total, N_Effect, N_Null =', ns_n_null + ns_n_effect, ',',
 
 # generate the signcon NDT sub-plot
 graphics_conf$title <- 'Sign-Consistency (%)'
-ns_plt_signcon <- generate_signcon_plot(ns_nondir_res,graphics_conf)
+ns_plt_signcon <- generate_signcon_plot(ns_signcon_nondir_res,graphics_conf)
 ns_plt_signcon
-effect_plt_signcon <- generate_signcon_plot(effect_nondir_res,graphics_conf)
+effect_plt_signcon <- generate_signcon_plot(effect_signcon_nondir_res,graphics_conf)
 effect_plt_signcon
 
+# generate the absolute effect size sub-plot
+graphics_conf$title <- 'Absolute effect size'
+ns_plt_abs_es <- generate_abs_es_plot(ns_abs_es_nondir_res,graphics_conf)
+ns_plt_abs_es
+effect_plt_abs_es <- generate_abs_es_plot(effect_abs_es_nondir_res,graphics_conf)
+effect_plt_abs_es
 
-# generate the non directional sign consistency test figure
-graphics_conf$title <- 'Sign-Consistency (%)'
-plt_signcon <- generate_signcon_plot(nondir_res_all,graphics_conf)
-plt_signcon
 
 # aggregate together the available tests results (GNT, QUID, OANOVA)
 # ns directional
@@ -548,3 +645,12 @@ ggsave(paste(plots_fld, 'effect_plt_sign_con__res.svg', sep = .Platform$file.sep
 ggsave(paste(plots_fld, 'effect_plt_sign_con__res.png', sep = .Platform$file.sep),
        width=15, height=6,plot = effect_plt_signcon, dpi = 1000)
 
+# save the absolute effect size test results
+ggsave(paste(plots_fld, 'ns_plt_abs_es_res.svg', sep = .Platform$file.sep),
+       width=20, height=9,plot = ns_plt_abs_es)
+ggsave(paste(plots_fld, 'ns_plt_abs_es__res.png', sep = .Platform$file.sep),
+       width=15, height=6,plot = ns_plt_abs_es, dpi = 1000)
+ggsave(paste(plots_fld, 'effect_plt_abs_es__res.svg', sep = .Platform$file.sep),
+       width=15, height=6,plot = effect_plt_abs_es)
+ggsave(paste(plots_fld, 'effect_plt_abs_es__res.png', sep = .Platform$file.sep),
+       width=15, height=6,plot = effect_plt_abs_es, dpi = 1000)

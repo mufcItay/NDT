@@ -30,7 +30,7 @@ get_sum_fs_cogdb <- function(analysis_conf, experiments) {
                            summary_f = analysis_conf@summary_f)
   map_f_to_exp <- function(exp_name) {
     # special case of an interaction effect
-    if(startsWith(exp_name,'Battich') | 
+    if(startsWith(exp_name,'Battich_etal_2021_rt') |
        startsWith(exp_name,'Roelofs') | 
        startsWith(exp_name,'Forti') | 
        startsWith(exp_name,'Yap')) {
@@ -39,19 +39,55 @@ get_sum_fs_cogdb <- function(analysis_conf, experiments) {
       summary_f <- function(mat) {
         return (get_diffscore_f(mat, args))
       }
+      summary_f_abs_es <- function(mat_cnd1, mat_cnd2) {
+        res1 <- lsr::cohensD(mat_cnd1[mat_cnd1[,'iv2'] == unique(mat_cnd1$iv2)[1], 'dv'],
+                             mat_cnd1[mat_cnd1[,'iv2'] == unique(mat_cnd1$iv2)[2], 'dv'])
+        res2 <- lsr::cohensD(mat_cnd2[mat_cnd2[,'iv2'] == unique(mat_cnd2$iv2)[1], 'dv'],
+                             mat_cnd2[mat_cnd2[,'iv2'] == unique(mat_cnd2$iv2)[2], 'dv'])
+        return(res1 - res2)
+      }
       test_f <- function(mat) {
         return(test_diffscore_perm(mat,args,interaction_args))
       }
-      } else {
+      } else if(startsWith(exp_name,'Battich_etal_2021_resp')) {
+        args <- interaction_args
+        args$iv <- 'iv2'
+        summary_f <- function(mat) {
+          return (get_diffscore_f(mat, args))
+        }
+        summary_f_abs_es <- function(mat_cnd1, mat_cnd2) {
+          # calculate effect size for each condition
+          counts11 <- mat_cnd1[mat_cnd1[,'iv2'] == unique(mat_cnd1$iv2)[1], 'dv']
+          counts12 <- mat_cnd1[mat_cnd1[,'iv2'] == unique(mat_cnd1$iv2)[2], 'dv']
+          counts21 <- mat_cnd2[mat_cnd2[,'iv2'] == unique(mat_cnd2$iv2)[1], 'dv']
+          counts22 <- mat_cnd2[mat_cnd2[,'iv2'] == unique(mat_cnd2$iv2)[2], 'dv']
+          counts1 <- c(sum(counts11 == 1), sum(counts11 == 2), sum(counts12 == 1), sum(counts12 == 2))
+          counts2 <- c(sum(counts21 == 1), sum(counts21 == 2), sum(counts22 == 1), sum(counts22 == 2)) 
+          mat_counts1 <- matrix(counts1, nrow = 2, byrow = TRUE)
+          mat_counts2 <- matrix(counts2, nrow = 2, byrow = TRUE)
+          phi1 <- sqrt(chisq.test(mat_counts1)$statistic) / sqrt(sum(counts1))
+          phi2 <- sqrt(chisq.test(mat_counts2)$statistic) / sqrt(sum(counts2))
+          
+          res <-  phi1 - phi2
+          
+          return(res)
+        }
+        test_f <- function(mat) {
+          return(test_diffscore_perm(mat,args,interaction_args))
+        }
+      }else {
         summary_f <- function(mat) {
           return (analysis_conf@summary_f(as.numeric(mat$dv)))
+        }
+        summary_f_abs_es <- function(mat_cnd1, mat_cnd2) {
+          return(lsr::cohensD(mat_cnd1[,'dv'], mat_cnd2[,'dv']))
         }
         test_f <- function(mat) {
           return(t.test(mat[mat$iv==unique(mat$iv)[1],]$dv,
                              mat[mat$iv==unique(mat$iv)[2],]$dv)$p.value)
         }
     }
-    return(list(summary = summary_f, test = test_f))
+    return(list(summary = summary_f, test = test_f, summary_abs_es = summary_f_abs_es))
   }
   df_to_f <- lapply(experiments, map_f_to_exp)
   names(df_to_f) <- experiments
